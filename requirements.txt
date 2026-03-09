@@ -8,3 +8,4 @@ bcrypt
 python-jose
 email-validator
 google-generativeai
+python-dotenv

@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-
+import 'services/api_service.dart';
 // --- GLOBAL STATE ---
 bool globalAiModerationEnabled = true;
 String globalUsername = "User";
@@ -707,12 +707,35 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
     showGlassSnackBar(context, "Secure OTP sent to ${_phoneController.text}",
         Icons.mark_email_read_outlined, Theme.of(context).colorScheme.primary);
   }
+void _verifyLogin() async {
 
-  void _verifyLogin() {
-    globalPhoneNumber = _phoneController.text;
-    Navigator.pushReplacement(context,
-        MaterialPageRoute(builder: (context) => const SetupProfileScreen()));
+  globalPhoneNumber = _phoneController.text;
+
+  try {
+
+    await ApiService.signup(
+      globalUsername,
+      globalPhoneNumber,
+    );
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SetupProfileScreen(),
+      ),
+    );
+
+  } catch (e) {
+
+    showGlassSnackBar(
+      context,
+      "Server connection failed",
+      Icons.error,
+      Colors.red,
+    );
+
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1644,82 +1667,83 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
     }
   }
 
-  void _handleSend() {
-    if (_controller.text.trim().isEmpty) return;
-    String text = _controller.text.trim();
-    String timeString = TimeOfDay.now().format(context);
+ Future<void> _handleSend() async {
 
-    // AI Check
-    if (widget.roomData["aiEnabled"] == true && globalAiModerationEnabled) {
-      String textLower = text.toLowerCase();
-      List<String> tags = (widget.roomData["tags"] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [];
+  if (_controller.text.trim().isEmpty) return;
 
-      bool isStudyRoom = tags.contains("Study");
-      bool isPoliticsRoom = tags.contains("Politics");
+  String text = _controller.text.trim();
+  String timeString = TimeOfDay.now().format(context);
 
-      bool isAbusive = textLower.contains("spam") ||
-          textLower.contains("badword") ||
-          textLower.contains("abuse");
-      bool isOffTopic = false;
-      String aiReason = "Off-topic discussion.";
+  // AI moderation via backend
+  if (widget.roomData["aiEnabled"] == true && globalAiModerationEnabled) {
 
-      if (isStudyRoom &&
-          (textLower.contains("movie") ||
-              textLower.contains("cinema") ||
-              textLower.contains("entertainment"))) {
-        isOffTopic = true;
-        aiReason = "Entertainment topics are restricted in Study spaces.";
-      }
+    try {
 
-      if (!isPoliticsRoom &&
-          (textLower.contains("election") || textLower.contains("politics"))) {
-        isOffTopic = true;
-        aiReason =
-            "Political discussions are only allowed in 'Politics' tagged spaces.";
-      }
+      final result = await ApiService.moderate(text);
 
-      if (isAbusive || isOffTopic) {
+      if (result["allowed"] == false) {
+
         showGlassSnackBar(
-            context,
-            "Blocked by AI: ${isAbusive ? 'Policy violation.' : aiReason}",
-            Icons.warning_amber_rounded,
-            const Color(0xFFE947F5));
+          context,
+          "Blocked by AI: ${result["reason"]}",
+          Icons.warning_amber_rounded,
+          const Color(0xFFE947F5),
+        );
 
-        // AGGRESSIVE CLEAR
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _controller.clear();
         });
+
         setState(() => _isTyping = false);
+
         if (_isListening) {
           _speech.stop();
           setState(() => _isListening = false);
         }
+
         return;
       }
+
+    } catch (e) {
+
+      print("Moderation API error: $e");
+
+      showGlassSnackBar(
+        context,
+        "AI moderation server unavailable",
+        Icons.error,
+        Colors.red,
+      );
     }
-
-    if (_isListening) {
-      _speech.stop();
-      setState(() => _isListening = false);
-    }
-
-    setState(() {
-      widget.roomData["messages"]
-          .add({"text": text, "isMe": true, "time": timeString});
-      widget.roomData["msg"] = text;
-      widget.roomData["time"] = timeString;
-    });
-
-    // AGGRESSIVE CLEAR ON SUCCESS
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _controller.clear();
-    });
-    setState(() => _isTyping = false);
-    _focusNode.requestFocus();
   }
+
+  // Stop voice input if active
+  if (_isListening) {
+    _speech.stop();
+    setState(() => _isListening = false);
+  }
+
+  // Add message locally
+  setState(() {
+
+    widget.roomData["messages"].add({
+      "text": text,
+      "isMe": true,
+      "time": timeString
+    });
+
+    widget.roomData["msg"] = text;
+    widget.roomData["time"] = timeString;
+  });
+
+  // Clear input
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _controller.clear();
+  });
+
+  setState(() => _isTyping = false);
+  _focusNode.requestFocus();
+}
 
   void _addMemberDirectly() {
     TextEditingController phoneController = TextEditingController();

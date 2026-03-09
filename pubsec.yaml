@@ -10,8 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  image_picker: ^1.0.7
-  speech_to_text: ^6.5.1
+  image_picker: ^1.1.2
+  speech_to_text: ^7.3.0
+  google_generative_ai: ^0.4.6
 
 flutter:
   uses-material-design: true

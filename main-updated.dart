@@ -274,7 +274,7 @@ class FoldableCubePainter extends CustomPainter {
 }
 
 // ==========================================
-// 1. BACKGROUNDS: FLOATING LINES & DARK VEIL
+// 1. BACKGROUNDS & PREMIUM LIQUID GLASS
 // ==========================================
 
 class FloatingLinesBackground extends StatefulWidget {
@@ -456,6 +456,9 @@ class _DarkVeilPainter extends CustomPainter {
       oldDelegate.time != time || oldDelegate.isDark != isDark;
 }
 
+// ----------------------------------------------------
+// UPGRADED LIQUID GLASS SURFACE WIDGET
+// ----------------------------------------------------
 class GlassSurface extends StatelessWidget {
   final Widget child;
   final double borderRadius;
@@ -473,28 +476,40 @@ class GlassSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: margin,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          filter:
+              ImageFilter.blur(sigmaX: 30, sigmaY: 30), // Intense liquid blur
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withOpacity(0.04)
-                  : Colors.black.withOpacity(0.02),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDark
+                    ? [
+                        Colors.white.withOpacity(0.12),
+                        Colors.white.withOpacity(0.01),
+                      ]
+                    : [
+                        Colors.white.withOpacity(0.8),
+                        Colors.white.withOpacity(0.2),
+                      ],
+              ),
               borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(
                 color: isDark
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.1),
-                width: 1.0,
+                    ? Colors.white.withOpacity(0.2)
+                    : Colors.white.withOpacity(0.8),
+                width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                   blurRadius: 30,
                   spreadRadius: -5,
                 ),
@@ -883,6 +898,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: FloatingLinesBackground(
         child: SafeArea(
@@ -893,20 +909,22 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     "Set Up Your Profile",
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : Colors.black,
                       letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     "Choose a name and an avatar for the community.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.white70),
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.white70 : Colors.black54),
                   ),
                   const SizedBox(height: 48),
                   AnimatedPress(
@@ -919,7 +937,8 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                           height: 140,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFF161824),
+                            color:
+                                isDark ? const Color(0xFF161824) : Colors.white,
                             border: Border.all(
                                 color: const Color(0xFFE947F5).withOpacity(0.5),
                                 width: 2),
@@ -948,7 +967,10 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                             color: const Color(0xFF2F4BA2),
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: const Color(0xFF0D0E15), width: 3),
+                                color: isDark
+                                    ? const Color(0xFF0D0E15)
+                                    : Colors.white,
+                                width: 3),
                           ),
                           child: const Icon(Icons.camera_alt,
                               color: Colors.white, size: 20),
@@ -959,13 +981,18 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                   const SizedBox(height: 40),
                   TextField(
                     controller: _nameController,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: 18),
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(
                       hintText: "Enter your display name",
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.black38),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
+                      fillColor: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.black.withOpacity(0.05),
                       contentPadding: const EdgeInsets.symmetric(vertical: 20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -1035,7 +1062,7 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
       "time": "12:00 PM",
       "tags": ["Tech", "Study"],
       "aiEnabled": true,
-      "rules": "No entertainment or sports.", // New Rules Backend Prop
+      "rules": "No entertainment or sports.",
       "members": [],
       "messages": <Map<String, dynamic>>[]
     },
@@ -1045,7 +1072,7 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
       "time": "10:45 AM",
       "tags": ["Politics", "Casual"],
       "aiEnabled": false,
-      "rules": "Be respectful, debate allowed.", // New Rules Backend Prop
+      "rules": "Be respectful, debate allowed.",
       "members": [],
       "messages": <Map<String, dynamic>>[]
     },
@@ -1162,7 +1189,8 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                   const SizedBox(height: 20),
                   TextField(
                     controller: newRoomController,
-                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                    style:
+                        TextStyle(color: isDark ? Colors.white : Colors.black),
                     decoration: InputDecoration(
                       hintText: "Enter space name...",
                       hintStyle: TextStyle(
@@ -1192,7 +1220,9 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                             style: TextStyle(
                                 color: isSelected
                                     ? Colors.white
-                                    : (isDark ? Colors.white70 : Colors.black87),
+                                    : (isDark
+                                        ? Colors.white70
+                                        : Colors.black87),
                                 fontSize: 12)),
                         selected: isSelected,
                         selectedColor: const Color(0xFFE947F5).withOpacity(0.6),
@@ -1219,11 +1249,15 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                   TextField(
                     controller: rulesController,
                     maxLines: 2,
-                    style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14),
+                    style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: "e.g., 'Block sports messages, focus on React...'",
+                      hintText:
+                          "e.g., 'Block sports messages, focus on React...'",
                       hintStyle: TextStyle(
-                          color: isDark ? Colors.white38 : Colors.black38, fontSize: 12),
+                          color: isDark ? Colors.white38 : Colors.black38,
+                          fontSize: 12),
                       filled: true,
                       fillColor: isDark
                           ? Colors.white.withOpacity(0.05)
@@ -1241,7 +1275,8 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                         onPressed: () => Navigator.pop(context),
                         child: Text("Cancel",
                             style: TextStyle(
-                                color: isDark ? Colors.white54 : Colors.black54)),
+                                color:
+                                    isDark ? Colors.white54 : Colors.black54)),
                       ),
                       const SizedBox(width: 12),
                       AnimatedPress(
@@ -1254,7 +1289,7 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                                 "time": "Just now",
                                 "tags": List<String>.from(selectedTags),
                                 "aiEnabled": true,
-                                "rules": rulesController.text.trim(), // Save rules here!
+                                "rules": rulesController.text.trim(),
                                 "members": [
                                   {
                                     "name": globalUsername,
@@ -1416,7 +1451,6 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
         (room["tags"] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
             [];
 
-    // Sync latest message for preview
     List messages = room["messages"] ?? [];
     String previewMsg = room["msg"];
     String previewTime = room["time"];
@@ -1435,11 +1469,20 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
           splashColor: accentColor.withOpacity(0.3),
           highlightColor: accentColor.withOpacity(0.15),
           onTap: () async {
-            await Navigator.push(
+            final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (context) => PeerspaceChatScreen(roomData: room)));
-            setState(() {}); 
+
+            // Remove the room if the user triggered the "Leave Group" action
+            if (result == 'leave') {
+              setState(() {
+                _rooms.remove(room);
+              });
+            } else {
+              setState(
+                  () {}); // Refresh home screen to update latest message previews
+            }
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -1644,8 +1687,8 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
             "Blocked by AI: ${isAbusive ? 'Policy violation.' : aiReason}",
             Icons.warning_amber_rounded,
             const Color(0xFFE947F5));
-        
-        // AGGRESSIVE CLEAR: Ensure UI updates immediately
+
+        // AGGRESSIVE CLEAR
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _controller.clear();
         });
@@ -1683,32 +1726,62 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     showAnimatedDialog(
-      context,
-      AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text("Add Member", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
-        content: TextField(
-            controller: phoneController,
-            keyboardType: TextInputType.phone,
-            style: TextStyle(color: isDark ? Colors.white : Colors.black),
-            decoration: InputDecoration(hintText: "Enter phone number", hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54), filled: true, fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel", style: TextStyle(color: isDark ? Colors.white54 : Colors.black54))),
-          AnimatedPress(
-            onTap: () {
-              if (phoneController.text.isNotEmpty) {
-                setState(() {
-                  widget.roomData["members"].add({"name": "New User (${phoneController.text.substring(math.max(0, phoneController.text.length - 4))})", "phone": phoneController.text, "role": "Member"});
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(8)), child: const Text("Add", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-          )
-        ],
-      )
-    );
+        context,
+        AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text("Add Member",
+              style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold)),
+          content: TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                  hintText: "Enter phone number",
+                  hintStyle: TextStyle(
+                      color: isDark ? Colors.white54 : Colors.black54),
+                  filled: true,
+                  fillColor: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none))),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("Cancel",
+                    style: TextStyle(
+                        color: isDark ? Colors.white54 : Colors.black54))),
+            AnimatedPress(
+              onTap: () {
+                if (phoneController.text.isNotEmpty) {
+                  setState(() {
+                    widget.roomData["members"].add({
+                      "name":
+                          "New User (${phoneController.text.substring(math.max(0, phoneController.text.length - 4))})",
+                      "phone": phoneController.text,
+                      "role": "Member"
+                    });
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: const Text("Add",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold))),
+            )
+          ],
+        ));
   }
 
   @override
@@ -1731,12 +1804,18 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
           elevation: 1,
           title: GestureDetector(
             onTap: () async {
-              await Navigator.push(
+              final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (context) =>
                           GroupInfoScreen(roomData: widget.roomData)));
-              setState(() {});
+
+              if (result == 'leave') {
+                Navigator.pop(context,
+                    'leave'); // Pass the leave request back up to ChatRoomsScreen
+              } else {
+                setState(() {});
+              }
             },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2010,40 +2089,104 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
         ));
   }
 
+  void _editRules() {
+    TextEditingController rulesController =
+        TextEditingController(text: widget.roomData["rules"]);
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showAnimatedDialog(
+        context,
+        AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text("Edit AI Rules",
+                style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold)),
+            content: TextField(
+              controller: rulesController,
+              maxLines: 3,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                  hintText: "Enter new AI moderation rules...",
+                  filled: true,
+                  fillColor: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none)),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Cancel",
+                      style: TextStyle(
+                          color: isDark ? Colors.white54 : Colors.black54))),
+              AnimatedPress(
+                  onTap: () {
+                    setState(() =>
+                        widget.roomData["rules"] = rulesController.text.trim());
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(8)),
+                      child: const Text("Save",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold))))
+            ]));
+  }
+
   void _manageUser(int index) {
     var member = widget.roomData["members"][index];
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+    bool isMe = member['phone'] == globalPhoneNumber ||
+        member['name'] == globalUsername;
+
     showAnimatedDialog(
         context,
         AlertDialog(
           backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Manage ${member['name']}",
+          title: Text(isMe ? "Manage Yourself" : "Manage ${member['name']}",
               style: TextStyle(
                   color: isDark ? Colors.white : Colors.black,
                   fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: Icon(Icons.admin_panel_settings,
-                    color: Theme.of(context).colorScheme.primary),
-                title: Text("Make Moderator",
-                    style:
-                        TextStyle(color: isDark ? Colors.white : Colors.black)),
-                onTap: () {
-                  setState(() => member['role'] = "Moderator");
-                  Navigator.pop(context);
-                },
-              ),
+              if (!isMe)
+                ListTile(
+                  leading: Icon(Icons.admin_panel_settings,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: Text("Make Moderator",
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black)),
+                  onTap: () {
+                    setState(() => member['role'] = "Moderator");
+                    Navigator.pop(context);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.redAccent),
-                title: const Text("Remove Member",
-                    style: TextStyle(color: Colors.redAccent)),
+                title: Text(isMe ? "Leave Space" : "Remove Member",
+                    style: const TextStyle(color: Colors.redAccent)),
                 onTap: () {
-                  setState(() => widget.roomData["members"].removeAt(index));
-                  Navigator.pop(context);
+                  if (isMe) {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context,
+                        'leave'); // Send signal to delete room and exit
+                  } else {
+                    setState(() => widget.roomData["members"].removeAt(index));
+                    Navigator.pop(context);
+                  }
                 },
               )
             ],
@@ -2081,20 +2224,25 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                 style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : Colors.black)),
+                                    color:
+                                        isDark ? Colors.white : Colors.black)),
                             const SizedBox(height: 4),
                             Text(
                                 "Filter off-topic & abusive messages for this specific group based on its tags.",
                                 style: TextStyle(
-                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.black54,
                                     fontSize: 13)),
                           ],
                         ),
                       ),
                       Switch(
                         activeColor: Theme.of(context).colorScheme.primary,
-                        activeTrackColor:
-                            Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                        activeTrackColor: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.4),
                         value: widget.roomData["aiEnabled"] ?? false,
                         onChanged: (val) =>
                             setState(() => widget.roomData["aiEnabled"] = val),
@@ -2102,11 +2250,29 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
+                  Divider(
+                      color: isDark ? Colors.white10 : Colors.black12,
+                      height: 1),
                   const SizedBox(height: 16),
-                  Text("Custom AI Rules (Gemini Prompt):", style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Custom AI Rules (Gemini):",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black)),
+                      AnimatedPress(
+                          onTap: _editRules,
+                          child: Icon(Icons.edit,
+                              size: 16,
+                              color: isDark ? Colors.white54 : Colors.black54))
+                    ],
+                  ),
                   const SizedBox(height: 6),
-                  Text(customRules, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontStyle: FontStyle.italic)),
+                  Text(customRules,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontStyle: FontStyle.italic)),
                 ],
               ),
             ),
@@ -2161,7 +2327,27 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                   ),
                 ),
               );
-            })
+            }),
+            const SizedBox(height: 30),
+            // LEAVE SPACE BUTTON
+            AnimatedPress(
+                onTap: () {
+                  Navigator.pop(context, 'leave'); // Propagate 'leave' upward
+                },
+                child: GlassSurface(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.exit_to_app, color: Colors.redAccent),
+                        SizedBox(width: 8),
+                        Text("Leave Space",
+                            style: TextStyle(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ],
+                    )))
           ],
         ),
       ),
@@ -2220,8 +2406,8 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
         context,
         AlertDialog(
           backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text("Edit Profile",
               style: TextStyle(
                   color: isDark ? Colors.white : Colors.black,

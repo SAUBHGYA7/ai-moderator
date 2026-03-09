@@ -5,13 +5,18 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-//ansh ek number ka mota mc hai
+
 // --- GLOBAL STATE ---
 bool globalAiModerationEnabled = true;
-String globalUsername = "Ansh Pathak";
+String globalUsername = "User";
+String globalPhoneNumber = "";
+// Standard "Unknown User" blank icon
 String globalProfilePicture =
-    "https://i.scdn.co/image/ab67616d0000b273d9985092cd88bffd97653b58";
+    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 Uint8List? globalProfileImageBytes;
+
+// THEME NOTIFIER FOR LIGHT/DARK MODE
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 
 void main() {
   runApp(const PeerspaceApp());
@@ -22,26 +27,143 @@ class PeerspaceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PEERSPACE',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0D0E15),
-        fontFamily: 'Roboto',
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFE947F5),
-          secondary: Color(0xFF2F4BA2),
-          surface: Color(0xFF161824),
-        ),
-      ),
-      home: const SplashScreen(),
-      debugShowCheckedModeBanner: false,
-    );
+    return ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeNotifier,
+        builder: (context, currentMode, child) {
+          return MaterialApp(
+            title: 'PEERSPACE',
+            themeMode: currentMode,
+            theme: ThemeData(
+              brightness: Brightness.light,
+              scaffoldBackgroundColor: const Color(0xFFF0F4F8),
+              fontFamily: 'Roboto',
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFFE947F5),
+                secondary: Color(0xFF2F4BA2),
+                surface: Colors.white,
+              ),
+            ),
+            darkTheme: ThemeData(
+              brightness: Brightness.dark,
+              scaffoldBackgroundColor: const Color(0xFF0D0E15),
+              fontFamily: 'Roboto',
+              colorScheme: const ColorScheme.dark(
+                primary: Color(0xFFE947F5),
+                secondary: Color(0xFF2F4BA2),
+                surface: Color(0xFF161824),
+              ),
+            ),
+            home: const SplashScreen(),
+            debugShowCheckedModeBanner: false,
+          );
+        });
   }
 }
 
 // ==========================================
-// 0. PAPER-TO-CUBE FOLDING LOGO
+// 0. ANIMATION HELPERS & SNACKBAR
+// ==========================================
+
+class AnimatedPress extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const AnimatedPress({super.key, required this.child, required this.onTap});
+
+  @override
+  State<AnimatedPress> createState() => _AnimatedPressState();
+}
+
+class _AnimatedPressState extends State<AnimatedPress> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.90),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+void showAnimatedDialog(BuildContext context, Widget dialog) {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: "Dismiss",
+    transitionDuration: const Duration(milliseconds: 400),
+    pageBuilder: (context, animation, secondaryAnimation) => dialog,
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      return ScaleTransition(
+        scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+        child: FadeTransition(opacity: animation, child: child),
+      );
+    },
+  );
+}
+
+void showGlassSnackBar(
+    BuildContext context, String message, IconData icon, Color iconColor) {
+  bool isDark = Theme.of(context).brightness == Brightness.dark;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    elevation: 0,
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: Colors.transparent,
+    content: ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withOpacity(0.85)
+                : Colors.black.withOpacity(0.85),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: isDark ? Colors.white : Colors.black, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2)
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFF161824) : Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 15,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  ));
+}
+
+// ==========================================
+// 1. PAPER-TO-CUBE FOLDING LOGO
 // ==========================================
 class CubeFoldingLogo extends StatefulWidget {
   final double size;
@@ -152,7 +274,7 @@ class FoldableCubePainter extends CustomPainter {
 }
 
 // ==========================================
-// 1. BACKGROUNDS
+// 1. BACKGROUNDS: FLOATING LINES & DARK VEIL
 // ==========================================
 
 class FloatingLinesBackground extends StatefulWidget {
@@ -184,13 +306,15 @@ class _FloatingLinesBackgroundState extends State<FloatingLinesBackground>
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Stack(
       children: [
-        Container(color: const Color(0xFF05050A)),
+        Container(
+            color: isDark ? const Color(0xFF05050A) : const Color(0xFFF0F4F8)),
         AnimatedBuilder(
           animation: _controller,
           builder: (context, child) => CustomPaint(
-              painter: _FloatingLinesPainter(_controller.value),
+              painter: _FloatingLinesPainter(_controller.value, isDark),
               size: Size.infinite),
         ),
         widget.child,
@@ -201,21 +325,20 @@ class _FloatingLinesBackgroundState extends State<FloatingLinesBackground>
 
 class _FloatingLinesPainter extends CustomPainter {
   final double time;
-  _FloatingLinesPainter(this.time);
+  final bool isDark;
+  _FloatingLinesPainter(this.time, this.isDark);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Color pink = const Color(0xFFE947F5);
-    final Color blue = const Color(0xFF2F4BA2);
+    final Color color1 = const Color(0xFF2F4BA2);
+    final Color color2 = const Color(0xFFE947F5);
     final Rect rect = Offset.zero & size;
-    final Gradient gradient = LinearGradient(
-      colors: [blue.withOpacity(0.8), pink.withOpacity(0.8)],
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-    );
 
     final paint = Paint()
-      ..shader = gradient.createShader(rect)
+      ..shader = LinearGradient(colors: [
+        color1.withOpacity(isDark ? 0.8 : 0.4),
+        color2.withOpacity(isDark ? 0.8 : 0.4)
+      ]).createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round
@@ -253,7 +376,7 @@ class _FloatingLinesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FloatingLinesPainter oldDelegate) =>
-      oldDelegate.time != time;
+      oldDelegate.time != time || oldDelegate.isDark != isDark;
 }
 
 class DarkVeilBackground extends StatefulWidget {
@@ -286,17 +409,20 @@ class _DarkVeilBackgroundState extends State<DarkVeilBackground>
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Stack(
       children: [
         Container(
-            color: widget.isLight
-                ? const Color(0xFF1A1C29)
-                : const Color(0xFF0D0E15)),
+            color: isDark
+                ? (widget.isLight
+                    ? const Color(0xFF1A1C29)
+                    : const Color(0xFF0D0E15))
+                : const Color(0xFFF0F4F8)),
         AnimatedBuilder(
           animation: _controller,
           builder: (context, child) => CustomPaint(
-              painter: _DarkVeilPainter(
-                  _controller.value * math.pi * 2, widget.isLight),
+              painter:
+                  _DarkVeilPainter(_controller.value * math.pi * 2, isDark),
               size: Size.infinite),
         ),
         widget.child,
@@ -307,28 +433,82 @@ class _DarkVeilBackgroundState extends State<DarkVeilBackground>
 
 class _DarkVeilPainter extends CustomPainter {
   final double time;
-  final bool isLight;
-  _DarkVeilPainter(this.time, this.isLight);
+  final bool isDark;
+  _DarkVeilPainter(this.time, this.isDark);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, isLight ? 150 : 120);
+    final paint = Paint()..maskFilter = MaskFilter.blur(BlurStyle.normal, 120);
 
     double x1 = size.width * (0.5 + 0.4 * math.sin(time * 0.7));
     double y1 = size.height * (0.5 + 0.3 * math.cos(time * 0.5));
-    paint.color = const Color(0xFF2F4BA2).withOpacity(isLight ? 0.2 : 0.4);
+    paint.color = const Color(0xFF2F4BA2).withOpacity(isDark ? 0.4 : 0.2);
     canvas.drawCircle(Offset(x1, y1), size.width * 0.6, paint);
 
     double x2 = size.width * (0.5 + 0.3 * math.cos(time * 0.4));
     double y2 = size.height * (0.5 + 0.4 * math.sin(time * 0.6));
-    paint.color = const Color(0xFFE947F5).withOpacity(isLight ? 0.15 : 0.3);
+    paint.color = const Color(0xFFE947F5).withOpacity(isDark ? 0.2 : 0.15);
     canvas.drawCircle(Offset(x2, y2), size.width * 0.5, paint);
   }
 
   @override
   bool shouldRepaint(covariant _DarkVeilPainter oldDelegate) =>
-      oldDelegate.time != time;
+      oldDelegate.time != time || oldDelegate.isDark != isDark;
+}
+
+class GlassSurface extends StatelessWidget {
+  final Widget child;
+  final double borderRadius;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+
+  const GlassSurface({
+    super.key,
+    required this.child,
+    this.borderRadius = 20,
+    this.padding = EdgeInsets.zero,
+    this.margin = EdgeInsets.zero,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: margin,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            padding: padding,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withOpacity(0.04)
+                  : Colors.black.withOpacity(0.02),
+              borderRadius: BorderRadius.circular(borderRadius),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.black.withOpacity(0.1),
+                width: 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                  blurRadius: 30,
+                  spreadRadius: -5,
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ShinyHoverText extends StatefulWidget {
@@ -404,7 +584,6 @@ class _ShinyHoverTextState extends State<ShinyHoverText>
 // ==========================================
 // 3. SPLASH & LOGIN SCREENS
 // ==========================================
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -414,7 +593,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _gradientController;
   late AnimationController _entranceController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -422,12 +600,8 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    _gradientController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 3))
-          ..repeat();
     _entranceController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1500));
-
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
         CurvedAnimation(parent: _entranceController, curve: Curves.elasticOut));
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -454,66 +628,41 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _gradientController.dispose();
     _entranceController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF09090E),
-      body: Stack(
-        children: [
-          Center(
-            child: AnimatedBuilder(
-              animation: _entranceController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CubeFoldingLogo(size: 100),
-                        const SizedBox(height: 24),
-                        AnimatedBuilder(
-                          animation: _gradientController,
-                          builder: (context, child) {
-                            return ShaderMask(
-                              blendMode: BlendMode.srcIn,
-                              shaderCallback: (bounds) {
-                                return LinearGradient(
-                                  colors: const [
-                                    Color(0xFFE947F5),
-                                    Color(0xFF2F4BA2),
-                                    Color(0xFFE947F5)
-                                  ],
-                                  stops: const [0.0, 0.5, 1.0],
-                                  begin: Alignment(
-                                      -2.0 + (_gradientController.value * 2),
-                                      0),
-                                  end: Alignment(
-                                      0.0 + (_gradientController.value * 2), 0),
-                                ).createShader(bounds);
-                              },
-                              child: const Text("PEERSPACE",
-                                  style: TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 2)),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+      backgroundColor:
+          isDark ? const Color(0xFF09090E) : const Color(0xFFF0F4F8),
+      body: Center(
+        child: AnimatedBuilder(
+          animation: _entranceController,
+          builder: (context, child) {
+            return FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CubeFoldingLogo(size: 100),
+                    const SizedBox(height: 24),
+                    Text("PEERSPACE",
+                        style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                            color: Theme.of(context).colorScheme.primary)),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -533,13 +682,28 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
   String _selectedLanguage = 'English';
   String _selectedCountry = 'India';
 
+  void _requestOTP() {
+    if (_phoneController.text.isEmpty) {
+      showGlassSnackBar(context, "Please enter your phone number.",
+          Icons.error_outline, Colors.redAccent);
+      return;
+    }
+    setState(() => _otpSent = true);
+    showGlassSnackBar(context, "Secure OTP sent to ${_phoneController.text}",
+        Icons.mark_email_read_outlined, Theme.of(context).colorScheme.primary);
+  }
+
   void _verifyLogin() {
+    globalPhoneNumber = _phoneController.text;
     Navigator.pushReplacement(context,
         MaterialPageRoute(builder: (context) => const SetupProfileScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    Color textColor = isDark ? Colors.white : Colors.black87;
+
     return Scaffold(
       body: FloatingLinesBackground(
         child: SafeArea(
@@ -549,30 +713,31 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Center(
-                  child: CubeFoldingLogo(size: 80),
-                ),
+                const Center(child: CubeFoldingLogo(size: 80)),
                 const SizedBox(height: 32),
-                const ShinyHoverText(
+                ShinyHoverText(
                   text: "PEERSPACE",
                   style: TextStyle(
                       fontSize: 42,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
-                      color: Color(0xFFE947F5)),
+                      color: Theme.of(context).colorScheme.primary),
                 ),
                 const SizedBox(height: 8),
-                const Text("AI-Powered Communities.",
-                    style: TextStyle(fontSize: 18, color: Colors.white70)),
+                Text("AI-Powered Communities.",
+                    style: TextStyle(
+                        fontSize: 18,
+                        color: isDark ? Colors.white70 : Colors.black54)),
                 const SizedBox(height: 40),
                 Row(
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _selectedLanguage,
-                        dropdownColor: const Color(0xFF161824),
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _inputDecoration("Language"),
+                        dropdownColor:
+                            isDark ? const Color(0xFF161824) : Colors.white,
+                        style: TextStyle(color: textColor),
+                        decoration: _inputDecoration("Language", isDark),
                         items: ['English', 'Spanish', 'French', 'Hindi']
                             .map((String val) =>
                                 DropdownMenuItem(value: val, child: Text(val)))
@@ -585,9 +750,10 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _selectedCountry,
-                        dropdownColor: const Color(0xFF161824),
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _inputDecoration("Country"),
+                        dropdownColor:
+                            isDark ? const Color(0xFF161824) : Colors.white,
+                        style: TextStyle(color: textColor),
+                        decoration: _inputDecoration("Country", isDark),
                         items: ['India', 'USA', 'UK', 'Canada']
                             .map((String val) =>
                                 DropdownMenuItem(value: val, child: Text(val)))
@@ -602,43 +768,51 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
                 TextField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration("Phone Number").copyWith(
-                      prefixIcon:
-                          const Icon(Icons.phone, color: Color(0xFFE947F5))),
+                  style: TextStyle(color: textColor),
+                  decoration: _inputDecoration("Phone Number", isDark).copyWith(
+                      prefixIcon: Icon(Icons.phone,
+                          color: Theme.of(context).colorScheme.primary)),
                 ),
                 const SizedBox(height: 24),
                 if (_otpSent) ...[
                   TextField(
                     controller: _otpController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration("Enter 6-digit OTP").copyWith(
-                        prefixIcon: const Icon(Icons.lock_outline,
-                            color: Color(0xFF2F4BA2))),
+                    style: TextStyle(color: textColor),
+                    decoration: _inputDecoration("Enter 6-digit OTP", isDark)
+                        .copyWith(
+                            prefixIcon: Icon(Icons.lock_outline,
+                                color:
+                                    Theme.of(context).colorScheme.secondary)),
                   ),
                   const SizedBox(height: 32),
                 ],
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2F4BA2),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 8,
-                      shadowColor: const Color(0xFF2F4BA2).withOpacity(0.5),
+                AnimatedPress(
+                  onTap: _otpSent ? _verifyLogin : _requestOTP,
+                  child: Container(
+                    width: double.infinity,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondary,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withOpacity(0.5),
+                            blurRadius: 10,
+                            spreadRadius: 1)
+                      ],
                     ),
-                    onPressed: _otpSent
-                        ? _verifyLogin
-                        : () => setState(() => _otpSent = true),
-                    child: Text(_otpSent ? 'Authenticate' : 'Request Code',
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1)),
+                    child: Center(
+                      child: Text(_otpSent ? 'Login' : 'Request Code',
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1,
+                              color: Colors.white)),
+                    ),
                   ),
                 ),
               ],
@@ -649,17 +823,19 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label) {
+  InputDecoration _inputDecoration(String label, bool isDark) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white54),
+      labelStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: isDark
+          ? Colors.white.withOpacity(0.05)
+          : Colors.black.withOpacity(0.05),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE947F5))),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)),
     );
   }
 }
@@ -733,7 +909,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                     style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                   const SizedBox(height: 48),
-                  GestureDetector(
+                  AnimatedPress(
                     onTap: _pickProfileImage,
                     child: Stack(
                       alignment: Alignment.bottomRight,
@@ -803,25 +979,30 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE947F5),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        elevation: 8,
-                        shadowColor: const Color(0xFFE947F5).withOpacity(0.5),
+                  AnimatedPress(
+                    onTap: _finishSetup,
+                    child: Container(
+                      width: double.infinity,
+                      height: 55,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE947F5),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                              color: const Color(0xFFE947F5).withOpacity(0.5),
+                              blurRadius: 10,
+                              spreadRadius: 1)
+                        ],
                       ),
-                      onPressed: _finishSetup,
-                      child: const Text(
-                        'Get Started',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1),
+                      child: const Center(
+                        child: Text(
+                          'Get Started',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1,
+                              color: Colors.white),
+                        ),
                       ),
                     ),
                   ),
@@ -854,10 +1035,9 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
       "time": "12:00 PM",
       "tags": ["Tech", "Study"],
       "aiEnabled": true,
-      "members": [
-        {"name": globalUsername, "role": "Admin"},
-        {"name": "Developer_X", "role": "Moderator"}
-      ]
+      "rules": "No entertainment or sports.", // New Rules Backend Prop
+      "members": [],
+      "messages": <Map<String, dynamic>>[]
     },
     {
       "title": "Global Events",
@@ -865,10 +1045,9 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
       "time": "10:45 AM",
       "tags": ["Politics", "Casual"],
       "aiEnabled": false,
-      "members": [
-        {"name": "NewsBot", "role": "Admin"},
-        {"name": globalUsername, "role": "Member"}
-      ]
+      "rules": "Be respectful, debate allowed.", // New Rules Backend Prop
+      "members": [],
+      "messages": <Map<String, dynamic>>[]
     },
   ];
 
@@ -880,174 +1059,241 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
     'Entertainment'
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _rooms[0]["members"] = [
+      {"name": globalUsername, "phone": globalPhoneNumber, "role": "Admin"},
+      {"name": "Developer_X", "phone": "9998887776", "role": "Moderator"}
+    ];
+    _rooms[1]["members"] = [
+      {"name": "NewsBot", "phone": "0000000000", "role": "Admin"},
+      {"name": globalUsername, "phone": globalPhoneNumber, "role": "Member"}
+    ];
+  }
+
   void _showProfileMenu(BuildContext context) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "Menu",
-      pageBuilder: (context, _, __) {
-        return Align(
-          alignment: Alignment.topRight,
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              margin: const EdgeInsets.only(top: 100, right: 16),
-              width: 220,
-              decoration: BoxDecoration(
-                  color: const Color(0xFF161824).withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: const Color(0xFF2F4BA2).withOpacity(0.3))),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.person_outline,
-                        color: Color(0xFFE947F5)),
-                    title: const Text('View Profile',
-                        style: TextStyle(color: Colors.white)),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const ProfilePictureScreen()));
-                      setState(() {}); // Refresh avatar/name after returning
-                    },
-                  ),
-                  const Divider(color: Colors.white10, height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.settings_outlined,
-                        color: Color(0xFF2F4BA2)),
-                    title: const Text('Settings',
-                        style: TextStyle(color: Colors.white)),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SettingsScreen()));
-                      setState(
-                          () {}); // Refresh in case global settings changed
-                    },
-                  ),
-                ],
-              ),
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    showAnimatedDialog(
+      context,
+      Align(
+        alignment: Alignment.topRight,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.only(top: 100, right: 16),
+            width: 220,
+            decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF161824).withOpacity(0.95)
+                    : Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: const Color(0xFF2F4BA2).withOpacity(0.3))),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.person_outline,
+                      color: Color(0xFFE947F5)),
+                  title: Text('View Profile',
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const ProfilePictureScreen()));
+                    setState(() {});
+                  },
+                ),
+                Divider(
+                    color: isDark ? Colors.white10 : Colors.black12, height: 1),
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined,
+                      color: Color(0xFF2F4BA2)),
+                  title: Text('Settings',
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const SettingsScreen()));
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   void _createNewRoom() {
     final TextEditingController newRoomController = TextEditingController();
+    final TextEditingController rulesController = TextEditingController();
     List<String> selectedTags = [];
 
-    showDialog(
-        context: context,
-        builder: (context) {
-          return StatefulBuilder(builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF161824),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              title: const Text("Create New Space",
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-              content: Column(
+    showAnimatedDialog(
+      context,
+      StatefulBuilder(builder: (context, setStateDialog) {
+        bool isDark = Theme.of(context).brightness == Brightness.dark;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: GlassSurface(
+            padding: const EdgeInsets.all(24),
+            borderRadius: 24,
+            child: SingleChildScrollView(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text("Create New Space",
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20)),
+                  const SizedBox(height: 20),
                   TextField(
                     controller: newRoomController,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
                     decoration: InputDecoration(
                       hintText: "Enter space name...",
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.black38),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
+                      fillColor: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.black.withOpacity(0.05),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text("Select Topics (Tags):",
-                      style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  const SizedBox(height: 8),
+                  Text("Select Topics (Tags):",
+                      style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black54,
+                          fontSize: 13)),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 8.0,
-                    runSpacing: 4.0,
+                    runSpacing: 8.0,
                     children: _availableTags.map((tag) {
                       final isSelected = selectedTags.contains(tag);
                       return FilterChip(
                         label: Text(tag,
                             style: TextStyle(
-                                color:
-                                    isSelected ? Colors.white : Colors.white70,
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isDark ? Colors.white70 : Colors.black87),
                                 fontSize: 12)),
                         selected: isSelected,
-                        selectedColor: const Color(0xFFE947F5).withOpacity(0.4),
-                        backgroundColor: Colors.white.withOpacity(0.05),
+                        selectedColor: const Color(0xFFE947F5).withOpacity(0.6),
+                        backgroundColor: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.black.withOpacity(0.05),
                         checkmarkColor: Colors.white,
                         onSelected: (bool selected) {
                           setStateDialog(() {
-                            if (selected) {
-                              selectedTags.add(tag);
-                            } else {
-                              selectedTags.remove(tag);
-                            }
+                            selected
+                                ? selectedTags.add(tag)
+                                : selectedTags.remove(tag);
                           });
                         },
                       );
                     }).toList(),
                   ),
+                  const SizedBox(height: 16),
+                  Text("Custom AI Rules (Powered by Gemini):",
+                      style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black54,
+                          fontSize: 13)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: rulesController,
+                    maxLines: 2,
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: "e.g., 'Block sports messages, focus on React...'",
+                      hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.black38, fontSize: 12),
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.black.withOpacity(0.05),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("Cancel",
+                            style: TextStyle(
+                                color: isDark ? Colors.white54 : Colors.black54)),
+                      ),
+                      const SizedBox(width: 12),
+                      AnimatedPress(
+                        onTap: () {
+                          if (newRoomController.text.trim().isNotEmpty) {
+                            setState(() {
+                              _rooms.insert(0, {
+                                "title": newRoomController.text.trim(),
+                                "msg": "Space created! Start chatting.",
+                                "time": "Just now",
+                                "tags": List<String>.from(selectedTags),
+                                "aiEnabled": true,
+                                "rules": rulesController.text.trim(), // Save rules here!
+                                "members": [
+                                  {
+                                    "name": globalUsername,
+                                    "phone": globalPhoneNumber,
+                                    "role": "Admin"
+                                  }
+                                ],
+                                "messages": <Map<String, dynamic>>[]
+                              });
+                            });
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          decoration: BoxDecoration(
+                              color: const Color(0xFFE947F5),
+                              borderRadius: BorderRadius.circular(12)),
+                          child: const Text("Create",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  )
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel",
-                      style: TextStyle(color: Colors.white54)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE947F5),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onPressed: () {
-                    if (newRoomController.text.trim().isNotEmpty) {
-                      setState(() {
-                        _rooms.insert(0, {
-                          "title": newRoomController.text.trim(),
-                          "msg": "Space created! Start chatting.",
-                          "time": "Just now",
-                          // FIX: Explicitly cast to List<String> to avoid List<dynamic> subtype error
-                          "tags": List<String>.from(selectedTags),
-                          "aiEnabled": true,
-                          "members": [
-                            {"name": globalUsername, "role": "Admin"}
-                          ]
-                        });
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text("Create",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            );
-          });
-        });
+            ),
+          ),
+        );
+      }),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: DarkVeilBackground(
         child: Stack(
@@ -1061,9 +1307,10 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                 final accentColor = index % 2 == 0
                     ? const Color(0xFFE947F5)
                     : const Color(0xFF2F4BA2);
-                return _chatTile(context, room, accentColor);
+                return _chatTile(context, room, accentColor, isDark);
               },
             ),
+            // PREMIUM TOP RECTANGLE BAR WITH TOGGLES
             Positioned(
               top: 0,
               left: 0,
@@ -1073,78 +1320,72 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16.0, vertical: 8.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                        decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                                color: Colors.white.withOpacity(0.15),
-                                width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 15,
-                                  spreadRadius: 2)
-                            ]),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const CubeFoldingLogo(size: 30),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(globalUsername.split(" ")[0],
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14)),
-                                const SizedBox(width: 12),
-                                GestureDetector(
-                                  onTap: () => _showProfileMenu(context),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: const LinearGradient(colors: [
-                                          Color(0xFFE947F5),
-                                          Color(0xFF2F4BA2)
-                                        ]),
-                                        boxShadow: [
-                                          BoxShadow(
-                                              color: const Color(0xFFE947F5)
-                                                  .withOpacity(0.6),
-                                              blurRadius: 15,
-                                              spreadRadius: 3),
-                                          BoxShadow(
-                                              color: const Color(0xFF2F4BA2)
-                                                  .withOpacity(0.6),
-                                              blurRadius: 15,
-                                              spreadRadius: 1,
-                                              offset: const Offset(-2, 2)),
-                                        ]),
-                                    child: CircleAvatar(
-                                      radius: 16,
-                                      backgroundImage:
-                                          globalProfileImageBytes != null
-                                              ? MemoryImage(
-                                                  globalProfileImageBytes!)
-                                              : NetworkImage(
-                                                      globalProfilePicture)
-                                                  as ImageProvider,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          ],
+                  child: GlassSurface(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    borderRadius: 24,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const CubeFoldingLogo(size: 28),
+                        const SizedBox(width: 8),
+                        Text("Hi 👋",
+                            style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18)),
+                        const Spacer(),
+                        AnimatedPress(
+                          onTap: () {
+                            themeNotifier.value =
+                                isDark ? ThemeMode.light : ThemeMode.dark;
+                          },
+                          child: Icon(
+                              isDark ? Icons.light_mode : Icons.dark_mode,
+                              color: isDark ? Colors.white : Colors.black,
+                              size: 22),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Switch(
+                            value: globalAiModerationEnabled,
+                            activeColor: const Color(0xFF00E5FF),
+                            activeTrackColor:
+                                const Color(0xFF00E5FF).withOpacity(0.4),
+                            onChanged: (val) {
+                              setState(() => globalAiModerationEnabled = val);
+                              showGlassSnackBar(
+                                  context,
+                                  val
+                                      ? "Global AI Active"
+                                      : "Global AI Disabled",
+                                  Icons.shield,
+                                  const Color(0xFF00E5FF));
+                            }),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _showProfileMenu(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: const Color(0xFF00E5FF)
+                                          .withOpacity(0.8),
+                                      blurRadius: 15,
+                                      spreadRadius: 2),
+                                ]),
+                            child: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.grey[800],
+                              backgroundImage: globalProfileImageBytes != null
+                                  ? MemoryImage(globalProfileImageBytes!)
+                                  : NetworkImage(globalProfilePicture)
+                                      as ImageProvider,
+                            ),
+                          ),
+                        )
+                      ],
                     ),
                   ),
                 ),
@@ -1153,30 +1394,13 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
             Positioned(
               bottom: 30,
               right: 20,
-              child: GestureDetector(
+              child: AnimatedPress(
                 onTap: _createNewRoom,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.1),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.3), width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 10,
-                                spreadRadius: 2)
-                          ]),
-                      child:
-                          const Icon(Icons.add, color: Colors.white, size: 28),
-                    ),
-                  ),
+                child: GlassSurface(
+                  borderRadius: 30,
+                  padding: const EdgeInsets.all(16),
+                  child: Icon(Icons.add,
+                      color: isDark ? Colors.white : Colors.black, size: 28),
                 ),
               ),
             ),
@@ -1186,77 +1410,74 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
     );
   }
 
-  Widget _chatTile(
-      BuildContext context, Map<String, dynamic> room, Color accentColor) {
-    // FIX: Safely parse tags to prevent List<dynamic> rendering crash
+  Widget _chatTile(BuildContext context, Map<String, dynamic> room,
+      Color accentColor, bool isDark) {
     List<String> tags =
         (room["tags"] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
             [];
 
-    return Container(
+    // Sync latest message for preview
+    List messages = room["messages"] ?? [];
+    String previewMsg = room["msg"];
+    String previewTime = room["time"];
+    if (messages.isNotEmpty) {
+      previewMsg = messages.last["text"];
+      previewTime = messages.last["time"] ?? previewTime;
+    }
+
+    return GlassSurface(
       margin: const EdgeInsets.only(bottom: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0), // Premium Blur
-          child: Material(
-            color: Colors.white
-                .withOpacity(0.08), // Slightly lighter for premium feel
-            borderRadius: BorderRadius.circular(20),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              splashColor: accentColor.withOpacity(0.2),
-              highlightColor: accentColor.withOpacity(0.1),
-              onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          PeerspaceChatScreen(roomData: room))),
-              child: Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: Colors.white.withOpacity(0.2), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 25,
-                          spreadRadius: -5)
-                    ]),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  leading: Container(
-                    width: 55,
-                    height: 55,
-                    decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Center(
-                        child: Text(
-                            room["title"].isNotEmpty
-                                ? room["title"][0].toUpperCase()
-                                : "?",
-                            style: TextStyle(
-                                color: accentColor,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900))),
-                  ),
-                  title: ShinyHoverText(
-                      text: room["title"],
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: Colors.white)),
-                  subtitle: Column(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          splashColor: accentColor.withOpacity(0.3),
+          highlightColor: accentColor.withOpacity(0.15),
+          onTap: () async {
+            await Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => PeerspaceChatScreen(roomData: room)));
+            setState(() {}); 
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 55,
+                  height: 55,
+                  decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Center(
+                      child: Text(
+                          room["title"].isNotEmpty
+                              ? room["title"][0].toUpperCase()
+                              : "?",
+                          style: TextStyle(
+                              color: accentColor,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900))),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(room["title"],
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: isDark ? Colors.white : Colors.black)),
                       const SizedBox(height: 6),
-                      Text(room["msg"],
+                      Text(previewMsg,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 14)),
+                          style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                              fontSize: 14)),
                       if (tags.isNotEmpty) ...[
                         const SizedBox(height: 10),
                         Wrap(
@@ -1266,35 +1487,39 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.1),
+                                          color: isDark
+                                              ? Colors.white.withOpacity(0.1)
+                                              : Colors.black.withOpacity(0.05),
                                           borderRadius:
                                               BorderRadius.circular(6)),
                                       child: Text(t,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 11,
-                                              color: Colors.white,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : Colors.black,
                                               fontWeight: FontWeight.w500)),
                                     ))
                                 .toList())
                       ]
                     ],
                   ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(room["time"],
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12)),
-                      if (room["aiEnabled"] == true)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8.0),
-                          child: Icon(Icons.shield,
-                              color: Color(0xFFE947F5), size: 14),
-                        )
-                    ],
-                  ),
                 ),
-              ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(previewTime,
+                        style: TextStyle(
+                            color: isDark ? Colors.white54 : Colors.black45,
+                            fontSize: 12)),
+                    if (room["aiEnabled"] == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Icon(Icons.shield, color: accentColor, size: 14),
+                      )
+                  ],
+                )
+              ],
             ),
           ),
         ),
@@ -1304,11 +1529,11 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
 }
 
 // ==========================================
-// 5. INDIVIDUAL CHAT SCREEN (DARK VEIL)
+// 5. INDIVIDUAL CHAT SCREEN
 // ==========================================
 
 class PeerspaceChatScreen extends StatefulWidget {
-  final Map<String, dynamic> roomData; // Pass room data so AI toggle applies
+  final Map<String, dynamic> roomData;
 
   const PeerspaceChatScreen({super.key, required this.roomData});
 
@@ -1319,16 +1544,18 @@ class PeerspaceChatScreen extends StatefulWidget {
 class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  final List<Map<String, dynamic>> _messages = [];
   bool _isTyping = false;
 
-  // Voice Typing Controller
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.roomData["messages"] == null) {
+      widget.roomData["messages"] = <Map<String, dynamic>>[];
+    }
+
     _controller.addListener(
         () => setState(() => _isTyping = _controller.text.isNotEmpty));
 
@@ -1351,6 +1578,7 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
+    if (_isListening) _speech.stop();
     super.dispose();
   }
 
@@ -1364,8 +1592,8 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
                   _controller.text = val.recognizedWords;
                 }));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Voice recognition not available.")));
+        showGlassSnackBar(context, "Voice recognition not available.",
+            Icons.mic_off, Colors.redAccent);
       }
     } else {
       setState(() => _isListening = false);
@@ -1376,9 +1604,10 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
   void _handleSend() {
     if (_controller.text.trim().isEmpty) return;
     String text = _controller.text.trim();
+    String timeString = TimeOfDay.now().format(context);
 
-    // Per-Group AI Moderation
-    if (widget.roomData["aiEnabled"] == true) {
+    // AI Check
+    if (widget.roomData["aiEnabled"] == true && globalAiModerationEnabled) {
       String textLower = text.toLowerCase();
       List<String> tags = (widget.roomData["tags"] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -1410,67 +1639,126 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
       }
 
       if (isAbusive || isOffTopic) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFE947F5),
-          content: Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded,
-                  color: Colors.white, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Text(
-                      "Blocked by AI: ${isAbusive ? 'Policy violation.' : aiReason}",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.white))),
-            ],
-          ),
-        ));
+        showGlassSnackBar(
+            context,
+            "Blocked by AI: ${isAbusive ? 'Policy violation.' : aiReason}",
+            Icons.warning_amber_rounded,
+            const Color(0xFFE947F5));
+        
+        // AGGRESSIVE CLEAR: Ensure UI updates immediately
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _controller.clear();
+        });
+        setState(() => _isTyping = false);
+        if (_isListening) {
+          _speech.stop();
+          setState(() => _isListening = false);
+        }
         return;
       }
     }
 
-    setState(() => _messages.add({"text": text, "isMe": true}));
-    _controller.clear();
+    if (_isListening) {
+      _speech.stop();
+      setState(() => _isListening = false);
+    }
+
+    setState(() {
+      widget.roomData["messages"]
+          .add({"text": text, "isMe": true, "time": timeString});
+      widget.roomData["msg"] = text;
+      widget.roomData["time"] = timeString;
+    });
+
+    // AGGRESSIVE CLEAR ON SUCCESS
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.clear();
+    });
+    setState(() => _isTyping = false);
     _focusNode.requestFocus();
+  }
+
+  void _addMemberDirectly() {
+    TextEditingController phoneController = TextEditingController();
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showAnimatedDialog(
+      context,
+      AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text("Add Member", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+        content: TextField(
+            controller: phoneController,
+            keyboardType: TextInputType.phone,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            decoration: InputDecoration(hintText: "Enter phone number", hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54), filled: true, fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel", style: TextStyle(color: isDark ? Colors.white54 : Colors.black54))),
+          AnimatedPress(
+            onTap: () {
+              if (phoneController.text.isNotEmpty) {
+                setState(() {
+                  widget.roomData["members"].add({"name": "New User (${phoneController.text.substring(math.max(0, phoneController.text.length - 4))})", "phone": phoneController.text, "role": "Member"});
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(8)), child: const Text("Add", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+          )
+        ],
+      )
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     List<String> tags = (widget.roomData["tags"] as List<dynamic>?)
             ?.map((e) => e.toString())
             .toList() ??
         [];
+    List<Map<String, dynamic>> messages = widget.roomData["messages"] ?? [];
+    List members = widget.roomData["members"] ?? [];
+
+    bool showAddMemberPrompt = members.length < 2 && messages.isEmpty;
+
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: const Color(0xFF161824).withOpacity(0.95),
+          backgroundColor: isDark
+              ? const Color(0xFF161824).withOpacity(0.95)
+              : Colors.white.withOpacity(0.95),
           elevation: 1,
-          shadowColor: Colors.black,
           title: GestureDetector(
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        GroupInfoScreen(roomData: widget.roomData))),
+            onTap: () async {
+              await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          GroupInfoScreen(roomData: widget.roomData)));
+              setState(() {});
+            },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Text(widget.roomData["title"],
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white)),
+                            color: isDark ? Colors.white : Colors.black)),
                     const SizedBox(width: 8),
-                    const Icon(Icons.info_outline,
-                        size: 14, color: Colors.white54)
+                    Icon(Icons.info_outline,
+                        size: 14,
+                        color: isDark ? Colors.white54 : Colors.black54)
                   ],
                 ),
                 if (tags.isNotEmpty)
                   Text("Tap for Group Info • Tags: ${tags.join(', ')}",
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.white54)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white54 : Colors.black54)),
               ],
             ),
           )),
@@ -1478,51 +1766,85 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
         child: Column(
           children: [
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final msg = _messages[index];
-                  return Align(
-                    alignment: msg["isMe"]
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                          child: Container(
+              child: showAddMemberPrompt
+                  ? Center(
+                      child: AnimatedPress(
+                        onTap: _addMemberDirectly,
+                        child: GlassSurface(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: msg["isMe"]
-                                  ? const Color(0xFFE947F5).withOpacity(0.15)
-                                  : Colors.white.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: msg["isMe"]
-                                      ? const Color(0xFFE947F5).withOpacity(0.4)
-                                      : Colors.white.withOpacity(0.2),
-                                  width: 1.2),
-                            ),
-                            child: Text(msg["text"],
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 16)),
-                          ),
-                        ),
+                                horizontal: 40, vertical: 30),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.group_add,
+                                    size: 48,
+                                    color:
+                                        Theme.of(context).colorScheme.primary),
+                                const SizedBox(height: 16),
+                                Text("It's quiet here.",
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black)),
+                                const SizedBox(height: 8),
+                                Text("Add members to start chatting!",
+                                    style: TextStyle(
+                                        color: isDark
+                                            ? Colors.white70
+                                            : Colors.black54)),
+                              ],
+                            )),
                       ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[index];
+                        return Align(
+                          alignment: msg["isMe"]
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: GlassSurface(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(msg["text"],
+                                      style: TextStyle(
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black,
+                                          fontSize: 16)),
+                                  const SizedBox(height: 4),
+                                  Text(msg["time"] ?? "",
+                                      style: TextStyle(
+                                          color: isDark
+                                              ? Colors.white38
+                                              : Colors.black38,
+                                          fontSize: 10)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
-                color: const Color(0xFF161824).withOpacity(0.85),
-                border: const Border(top: BorderSide(color: Colors.white10)),
+                color: isDark
+                    ? const Color(0xFF161824).withOpacity(0.85)
+                    : Colors.white.withOpacity(0.85),
+                border: Border(
+                    top: BorderSide(
+                        color: isDark ? Colors.white10 : Colors.black12)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -1534,12 +1856,17 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
                       minLines: 1,
                       maxLines: 5,
                       textInputAction: TextInputAction.newline,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                          fontSize: 15),
                       decoration: InputDecoration(
                         hintText: "Message ${widget.roomData['title']}...",
-                        hintStyle: const TextStyle(color: Colors.white38),
+                        hintStyle: TextStyle(
+                            color: isDark ? Colors.white38 : Colors.black38),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.03),
+                        fillColor: isDark
+                            ? Colors.white.withOpacity(0.03)
+                            : Colors.black.withOpacity(0.03),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 14),
                         border: OutlineInputBorder(
@@ -1549,7 +1876,7 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  GestureDetector(
+                  AnimatedPress(
                     onTap: _listenForVoice,
                     child: Container(
                       width: 48,
@@ -1559,13 +1886,16 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
                           shape: BoxShape.circle,
                           color: _isListening
                               ? Colors.redAccent
-                              : Colors.white.withOpacity(0.1)),
+                              : (isDark
+                                  ? Colors.white.withOpacity(0.1)
+                                  : Colors.black.withOpacity(0.05))),
                       child: Icon(_isListening ? Icons.mic : Icons.mic_none,
-                          color: Colors.white, size: 20),
+                          color: isDark ? Colors.white : Colors.black,
+                          size: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  GestureDetector(
+                  AnimatedPress(
                     onTap: _handleSend,
                     child: Container(
                       width: 48,
@@ -1574,12 +1904,16 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _isTyping
-                            ? const Color(0xFFE947F5)
-                            : Colors.white.withOpacity(0.1),
+                            ? Theme.of(context).colorScheme.primary
+                            : (isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05)),
                         boxShadow: _isTyping
                             ? [
                                 BoxShadow(
-                                    color: const Color(0xFFE947F5)
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
                                         .withOpacity(0.4),
                                     blurRadius: 10,
                                     spreadRadius: 2)
@@ -1587,7 +1921,9 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
                             : null,
                       ),
                       child: Icon(Icons.send,
-                          color: _isTyping ? Colors.white : Colors.white54,
+                          color: _isTyping
+                              ? Colors.white
+                              : (isDark ? Colors.white54 : Colors.black54),
                           size: 20),
                     ),
                   ),
@@ -1615,122 +1951,162 @@ class GroupInfoScreen extends StatefulWidget {
 class _GroupInfoScreenState extends State<GroupInfoScreen> {
   void _addMember() {
     TextEditingController phoneController = TextEditingController();
-    showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-              backgroundColor: const Color(0xFF161824),
-              title: const Text("Add Member",
-                  style: TextStyle(color: Colors.white)),
-              content: TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                      hintText: "Enter phone number",
-                      hintStyle: TextStyle(color: Colors.white54))),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Cancel")),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE947F5)),
-                  onPressed: () {
-                    if (phoneController.text.isNotEmpty) {
-                      setState(() => widget.roomData["members"].add({
-                            "name":
-                                "New User (${phoneController.text.substring(math.max(0, phoneController.text.length - 4))})",
-                            "role": "Member"
-                          }));
-                      Navigator.pop(context);
-                    }
-                  },
-                  child:
-                      const Text("Add", style: TextStyle(color: Colors.white)),
-                )
-              ],
-            ));
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showAnimatedDialog(
+        context,
+        AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text("Add Member",
+              style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold)),
+          content: TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                  hintText: "Enter phone number",
+                  hintStyle: TextStyle(
+                      color: isDark ? Colors.white54 : Colors.black54),
+                  filled: true,
+                  fillColor: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none))),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("Cancel",
+                    style: TextStyle(
+                        color: isDark ? Colors.white54 : Colors.black54))),
+            AnimatedPress(
+              onTap: () {
+                if (phoneController.text.isNotEmpty) {
+                  setState(() => widget.roomData["members"].add({
+                        "name":
+                            "New User (${phoneController.text.substring(math.max(0, phoneController.text.length - 4))})",
+                        "phone": phoneController.text,
+                        "role": "Member"
+                      }));
+                  Navigator.pop(context);
+                }
+              },
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: const Text("Add",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold))),
+            )
+          ],
+        ));
   }
 
   void _manageUser(int index) {
     var member = widget.roomData["members"][index];
-    showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-              backgroundColor: const Color(0xFF161824),
-              title: Text("Manage ${member['name']}",
-                  style: const TextStyle(color: Colors.white)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.admin_panel_settings,
-                        color: Color(0xFFE947F5)),
-                    title: const Text("Make Moderator",
-                        style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      setState(() => member['role'] = "Moderator");
-                      Navigator.pop(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.delete, color: Colors.redAccent),
-                    title: const Text("Remove Member",
-                        style: TextStyle(color: Colors.redAccent)),
-                    onTap: () {
-                      setState(
-                          () => widget.roomData["members"].removeAt(index));
-                      Navigator.pop(context);
-                    },
-                  )
-                ],
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    showAnimatedDialog(
+        context,
+        AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text("Manage ${member['name']}",
+              style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.admin_panel_settings,
+                    color: Theme.of(context).colorScheme.primary),
+                title: Text("Make Moderator",
+                    style:
+                        TextStyle(color: isDark ? Colors.white : Colors.black)),
+                onTap: () {
+                  setState(() => member['role'] = "Moderator");
+                  Navigator.pop(context);
+                },
               ),
-            ));
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.redAccent),
+                title: const Text("Remove Member",
+                    style: TextStyle(color: Colors.redAccent)),
+                onTap: () {
+                  setState(() => widget.roomData["members"].removeAt(index));
+                  Navigator.pop(context);
+                },
+              )
+            ],
+          ),
+        ));
   }
 
   @override
   Widget build(BuildContext context) {
     List members = widget.roomData["members"] ?? [];
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    String customRules = widget.roomData["rules"] ?? "None defined.";
 
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: const Color(0xFF161824),
-          title: const Text("Group Info")),
+          backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
+          title: Text("Group Info",
+              style: TextStyle(color: isDark ? Colors.white : Colors.black))),
       body: DarkVeilBackground(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Container(
+            GlassSurface(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(16)),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text("Group AI Moderation",
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        SizedBox(height: 4),
-                        Text(
-                            "Filter off-topic & abusive messages for this specific group based on its tags.",
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 13)),
-                      ],
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Group AI Moderation",
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black)),
+                            const SizedBox(height: 4),
+                            Text(
+                                "Filter off-topic & abusive messages for this specific group based on its tags.",
+                                style: TextStyle(
+                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        activeColor: Theme.of(context).colorScheme.primary,
+                        activeTrackColor:
+                            Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                        value: widget.roomData["aiEnabled"] ?? false,
+                        onChanged: (val) =>
+                            setState(() => widget.roomData["aiEnabled"] = val),
+                      ),
+                    ],
                   ),
-                  Switch(
-                    activeColor: const Color(0xFFE947F5),
-                    activeTrackColor: const Color(0xFFE947F5).withOpacity(0.4),
-                    value: widget.roomData["aiEnabled"] ?? false,
-                    onChanged: (val) =>
-                        setState(() => widget.roomData["aiEnabled"] = val),
-                  ),
+                  const SizedBox(height: 16),
+                  Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
+                  const SizedBox(height: 16),
+                  Text("Custom AI Rules (Gemini Prompt):", style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
+                  const SizedBox(height: 6),
+                  Text(customRules, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontStyle: FontStyle.italic)),
                 ],
               ),
             ),
@@ -1738,32 +2114,52 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Members",
+                Text("Members",
                     style: TextStyle(
-                        color: Color(0xFFE947F5),
+                        color: Theme.of(context).colorScheme.primary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold)),
-                IconButton(
-                    icon: const Icon(Icons.person_add, color: Colors.white),
-                    onPressed: _addMember)
+                AnimatedPress(
+                    onTap: _addMember,
+                    child: Icon(Icons.person_add,
+                        color: isDark ? Colors.white : Colors.black))
               ],
             ),
             const SizedBox(height: 10),
             ...List.generate(members.length, (index) {
-              return ListTile(
-                leading: CircleAvatar(
-                    backgroundColor: Colors.white10,
-                    child: Text(members[index]["name"][0])),
-                title: Text(members[index]["name"],
-                    style: const TextStyle(color: Colors.white)),
-                subtitle: Text(members[index]["role"],
-                    style: TextStyle(
-                        color: members[index]["role"] == "Admin" ||
-                                members[index]["role"] == "Moderator"
-                            ? const Color(0xFFE947F5)
-                            : Colors.white54)),
-                trailing: const Icon(Icons.more_vert, color: Colors.white54),
-                onTap: () => _manageUser(index),
+              return GlassSurface(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(4),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _manageUser(index),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                          backgroundColor:
+                              isDark ? Colors.white10 : Colors.black12,
+                          child: Text(members[index]["name"][0])),
+                      title: Text(members[index]["name"],
+                          style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                          members[index]["phone"] ?? "Unknown Number",
+                          style: TextStyle(
+                              color: isDark ? Colors.white54 : Colors.black54)),
+                      trailing: Text(members[index]["role"],
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: members[index]["role"] == "Admin" ||
+                                      members[index]["role"] == "Moderator"
+                                  ? Theme.of(context).colorScheme.primary
+                                  : (isDark
+                                      ? Colors.white54
+                                      : Colors.black54))),
+                    ),
+                  ),
+                ),
               );
             })
           ],
@@ -1774,7 +2170,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 }
 
 // ==========================================
-// 6. TILTED PROFILE PICTURE SCREEN (FIXED NAME POSITION)
+// 6. TILTED PROFILE PICTURE SCREEN
 // ==========================================
 
 class ProfilePictureScreen extends StatefulWidget {
@@ -1819,50 +2215,63 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
   void _editProfile() {
     TextEditingController nameController =
         TextEditingController(text: globalUsername);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF161824),
-          title:
-              const Text("Edit Profile", style: TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                    labelText: "Username",
-                    labelStyle: TextStyle(color: Colors.white54)),
-              ),
-            ],
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    showAnimatedDialog(
+        context,
+        AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF161824) : Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          title: Text("Edit Profile",
+              style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: nameController,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            decoration: InputDecoration(
+                labelText: "Username",
+                labelStyle:
+                    TextStyle(color: isDark ? Colors.white54 : Colors.black54),
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.05),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none)),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel")),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE947F5)),
-              onPressed: () {
+                child: Text("Cancel",
+                    style: TextStyle(
+                        color: isDark ? Colors.white54 : Colors.black54))),
+            AnimatedPress(
+              onTap: () {
                 setState(() => globalUsername = nameController.text);
                 Navigator.pop(context);
               },
-              child: const Text("Save", style: TextStyle(color: Colors.white)),
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: const Text("Save",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold))),
             ),
           ],
-        );
-      },
-    );
+        ));
   }
 
   void _onPanUpdate(DragUpdateDetails details, BoxConstraints constraints) {
     if (_springController.isAnimating) _springController.stop();
     double rotateAmplitude = 12.0 * (math.pi / 180.0);
     setState(() {
-      xRotation = (details.localPosition.dy - 150) / 150 * -rotateAmplitude;
-      yRotation = (details.localPosition.dx - 150) / 150 * rotateAmplitude;
+      xRotation = (details.localPosition.dy - 125) / 125 * -rotateAmplitude;
+      yRotation = (details.localPosition.dx - 125) / 125 * rotateAmplitude;
     });
   }
 
@@ -1882,12 +2291,14 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
       appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text("Profile Details", style: TextStyle(fontSize: 16))),
+          title: Text("Profile Details",
+              style: TextStyle(
+                  fontSize: 16, color: isDark ? Colors.white : Colors.black))),
       body: DarkVeilBackground(
         isLight: true,
         child: Center(
@@ -1895,7 +2306,6 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 3D TILTED IMAGE
                 LayoutBuilder(builder: (context, constraints) {
                   return GestureDetector(
                     onPanUpdate: (details) =>
@@ -1914,7 +2324,7 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                                color: const Color(0xFFE947F5).withOpacity(0.3),
+                                color: const Color(0xFF00E5FF).withOpacity(0.5),
                                 blurRadius: 40,
                                 spreadRadius: 2)
                           ],
@@ -1931,45 +2341,57 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
                   );
                 }),
                 const SizedBox(height: 30),
-
-                // NAME PLACED BELOW THE PICTURE
-                GestureDetector(
+                AnimatedPress(
                   onTap: _editProfile,
-                  child: Container(
+                  child: GlassSurface(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF161824).withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: const Color(0xFF2F4BA2).withOpacity(0.5)),
-                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(globalUsername,
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(width: 12),
-                        const Icon(Icons.edit, size: 18, color: Colors.white54)
+                        Icon(Icons.edit,
+                            size: 18,
+                            color: isDark ? Colors.white54 : Colors.black54)
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // UPLOAD BUTTON
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2F4BA2),
+                AnimatedPress(
+                  onTap: _pickProfileImage,
+                  child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12)),
-                  icon: const Icon(Icons.upload_file, color: Colors.white),
-                  label: const Text("Upload from PC/Mobile",
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  onPressed: _pickProfileImage,
+                          horizontal: 24, vertical: 16),
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.secondary,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .secondary
+                                    .withOpacity(0.5),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5))
+                          ]),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.upload_file, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text("Upload from PC/Mobile",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      )),
                 )
               ],
             ),
@@ -1981,7 +2403,7 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
 }
 
 // ==========================================
-// 7. SETTINGS SCREEN (LIGHTER BACKGROUND)
+// 7. SETTINGS SCREEN
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
@@ -1994,53 +2416,53 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
       appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text("Settings", style: TextStyle(fontSize: 16))),
-      // Made background lighter using the new parameter
+          title: Text("Settings",
+              style: TextStyle(
+                  fontSize: 16, color: isDark ? Colors.white : Colors.black))),
       body: DarkVeilBackground(
         isLight: true,
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            Container(
+            GlassSurface(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: globalAiModerationEnabled
-                        ? const Color(0xFFE947F5)
-                        : Colors.white10),
-              ),
               child: Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text("Global AI Moderation",
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white)),
-                        SizedBox(height: 4),
+                                color: isDark ? Colors.white : Colors.black)),
+                        const SizedBox(height: 4),
                         Text("Pre-validate messages before posting.",
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 13)),
+                            style: TextStyle(
+                                color: isDark ? Colors.white54 : Colors.black54,
+                                fontSize: 13)),
                       ],
                     ),
                   ),
                   Switch(
-                    activeColor: const Color(0xFFE947F5),
-                    activeTrackColor: const Color(0xFFE947F5).withOpacity(0.4),
-                    value: globalAiModerationEnabled,
-                    onChanged: (val) =>
-                        setState(() => globalAiModerationEnabled = val),
-                  ),
+                      activeColor: const Color(0xFF00E5FF),
+                      activeTrackColor:
+                          const Color(0xFF00E5FF).withOpacity(0.4),
+                      value: globalAiModerationEnabled,
+                      onChanged: (val) {
+                        setState(() => globalAiModerationEnabled = val);
+                        showGlassSnackBar(
+                            context,
+                            val ? "Global AI Active" : "Global AI Disabled",
+                            Icons.shield,
+                            const Color(0xFF00E5FF));
+                      }),
                 ],
               ),
             ),
@@ -2056,7 +2478,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _settingsItem(
                 Icons.notifications_none,
                 "Notifications",
-                const Color(0xFFE947F5),
+                Theme.of(context).colorScheme.primary,
                 () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -2064,7 +2486,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _settingsItem(
                 Icons.admin_panel_settings,
                 "Admin Panel",
-                const Color(0xFFE947F5),
+                Theme.of(context).colorScheme.primary,
                 () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -2077,37 +2499,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _settingsItem(
       IconData icon, String title, Color accent, VoidCallback onTap) {
-    return GestureDetector(
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnimatedPress(
       onTap: onTap,
-      child: Container(
+      child: GlassSurface(
         margin: const EdgeInsets.only(bottom: 12.0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08), // Lighter for visibility
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withOpacity(0.3), width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  Icon(icon, color: accent, size: 22),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: Text(title,
-                          style: const TextStyle(
-                              fontSize: 15,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold))),
-                  const Icon(Icons.arrow_forward_ios,
-                      size: 14, color: Colors.white70),
-                ],
-              ),
-            ),
-          ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: accent, size: 22),
+            const SizedBox(width: 16),
+            Expanded(
+                child: Text(title,
+                    style: TextStyle(
+                        fontSize: 15,
+                        color: isDark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.bold))),
+            Icon(Icons.arrow_forward_ios,
+                size: 14, color: isDark ? Colors.white70 : Colors.black54),
+          ],
         ),
       ),
     );
@@ -2140,12 +2550,14 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
       appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text("Notifications", style: TextStyle(fontSize: 16))),
+          title: Text("Notifications",
+              style: TextStyle(
+                  fontSize: 16, color: isDark ? Colors.white : Colors.black))),
       body: DarkVeilBackground(
         isLight: true,
         child: ListView.builder(
@@ -2153,43 +2565,31 @@ class NotificationsScreen extends StatelessWidget {
           itemCount: _notifications.length,
           itemBuilder: (context, index) {
             final notif = _notifications[index];
-            return Container(
+            return GlassSurface(
               margin: const EdgeInsets.only(bottom: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: const Color(0xFFE947F5).withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(notif["title"]!,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white)),
-                            Text(notif["time"]!,
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 12)),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(notif["body"]!,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 14)),
-                      ],
-                    ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(notif["title"]!,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black)),
+                      Text(notif["time"]!,
+                          style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                              fontSize: 12)),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  Text(notif["body"]!,
+                      style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black87,
+                          fontSize: 14)),
+                ],
               ),
             );
           },
@@ -2215,13 +2615,14 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
       appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title:
-              const Text("Privacy & Security", style: TextStyle(fontSize: 16))),
+          title: Text("Privacy & Security",
+              style: TextStyle(
+                  fontSize: 16, color: isDark ? Colors.white : Colors.black))),
       body: DarkVeilBackground(
         isLight: true,
         child: ListView(
@@ -2231,87 +2632,79 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                 style: TextStyle(
                     color: Color(0xFF2F4BA2), fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.key, color: Colors.white70),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("Password",
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(
-                                _obscurePassword
-                                    ? "••••••••••••••••"
-                                    : _mockPassword,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
+            GlassSurface(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.key,
+                      color: isDark ? Colors.white70 : Colors.black54),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Password",
+                            style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.black54,
+                                fontSize: 12)),
+                        const SizedBox(height: 4),
+                        Text(
                             _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: const Color(0xFFE947F5)),
-                        onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword),
-                      )
-                    ],
+                                ? "••••••••••••••••"
+                                : _mockPassword,
+                            style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2)),
+                      ],
+                    ),
                   ),
-                ),
+                  AnimatedPress(
+                    onTap: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    child: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Theme.of(context).colorScheme.primary),
+                  )
+                ],
               ),
             ),
             const SizedBox(height: 32),
-            const Text("End-to-End Encrypted Chats",
+            Text("End-to-End Encrypted Chats",
                 style: TextStyle(
-                    color: Color(0xFFE947F5), fontWeight: FontWeight.bold)),
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            _buildEncryptedChatRow("System Architecture"),
-            _buildEncryptedChatRow("Global Events"),
+            _buildEncryptedChatRow("System Architecture", isDark),
+            _buildEncryptedChatRow("Global Events", isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEncryptedChatRow(String roomName) {
-    return Container(
+  Widget _buildEncryptedChatRow(String roomName, bool isDark) {
+    return GlassSurface(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Row(
         children: [
-          const Icon(Icons.lock, color: Color(0xFFE947F5), size: 16),
+          Icon(Icons.lock,
+              color: Theme.of(context).colorScheme.primary, size: 16),
           const SizedBox(width: 12),
           Text(roomName,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold)),
           const Spacer(),
           const Text("Secured",
-              style: TextStyle(color: Colors.greenAccent, fontSize: 12)),
+              style: TextStyle(
+                  color: Colors.greenAccent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -2319,7 +2712,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
 }
 
 // ==========================================
-// 10. ADMIN PANEL SCREEN (FLAGGED CHATS)
+// 10. ADMIN PANEL SCREEN
 // ==========================================
 class AdminPanelScreen extends StatelessWidget {
   const AdminPanelScreen({super.key});
@@ -2341,6 +2734,7 @@ class AdminPanelScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
     List<Map<String, String>> dynamicFlags = List.from(_flaggedMessages);
     dynamicFlags.insert(1, {
       "sender": globalUsername,
@@ -2350,12 +2744,12 @@ class AdminPanelScreen extends StatelessWidget {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
       appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text("Admin Moderation Panel",
-              style: TextStyle(fontSize: 16))),
+          title: Text("Admin Moderation Panel",
+              style: TextStyle(
+                  fontSize: 16, color: isDark ? Colors.white : Colors.black))),
       body: DarkVeilBackground(
         isLight: true,
         child: Column(
@@ -2365,16 +2759,17 @@ class AdminPanelScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text("Intercepted Messages",
                       style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                  SizedBox(height: 8),
+                          color: isDark ? Colors.white : Colors.black)),
+                  const SizedBox(height: 8),
                   Text(
                       "Messages blocked by the AI Moderator before reaching the community.",
-                      style: TextStyle(color: Colors.white70)),
+                      style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black87)),
                 ],
               ),
             ),
@@ -2407,9 +2802,11 @@ class AdminPanelScreen extends StatelessWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text("Sender: ${flag['sender']}",
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.white)),
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black)),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
@@ -2427,28 +2824,40 @@ class AdminPanelScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text("Attempted in: ${flag['space']}",
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 12)),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 12.0),
-                                child:
-                                    Divider(color: Colors.white24, height: 1),
+                                  style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black54,
+                                      fontSize: 12)),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12.0),
+                                child: Divider(
+                                    color: isDark
+                                        ? Colors.white24
+                                        : Colors.black12,
+                                    height: 1),
                               ),
                               Text('"${flag['msg']}"',
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color:
+                                          isDark ? Colors.white : Colors.black,
                                       fontStyle: FontStyle.italic)),
                               const SizedBox(height: 12),
                               Row(
                                 children: [
-                                  const Icon(Icons.security,
-                                      color: Color(0xFFE947F5), size: 14),
+                                  Icon(Icons.security,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 14),
                                   const SizedBox(width: 8),
                                   Expanded(
                                       child: Text(
                                           "Violation: ${flag['reason']}",
-                                          style: const TextStyle(
-                                              color: Color(0xFFE947F5),
+                                          style: TextStyle(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold))),
                                 ],

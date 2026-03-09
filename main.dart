@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Added for hardware keyboard events
+import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 
 // Global state for Hackathon Demo
 bool globalAiModerationEnabled = true;
-String globalUsername = "Ansh Pathak";
-// Default Mystery Person Avatar
-String globalProfilePicUrl =
-    "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
 
 void main() {
   runApp(const PeerspaceApp());
@@ -37,7 +33,113 @@ class PeerspaceApp extends StatelessWidget {
   }
 }
 
-// --- 0. SPLASH SCREEN ---
+// ==========================================
+// 0. NEW PAPER-TO-CUBE FOLDING LOGO
+// ==========================================
+class CubeFoldingLogo extends StatefulWidget {
+  final double size;
+  final Color color;
+  const CubeFoldingLogo({super.key, this.size = 50, this.color = const Color(0xFFE947F5)});
+
+  @override
+  State<CubeFoldingLogo> createState() => _CubeFoldingLogoState();
+}
+
+class _CubeFoldingLogoState extends State<CubeFoldingLogo> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          // Use an ease curve to make the fold snap nicely
+          double progress = Curves.easeInOutCubic.transform(_controller.value);
+          return CustomPaint(
+            painter: FoldableCubePainter(progress, widget.color),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class FoldableCubePainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  FoldableCubePainter(this.progress, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2.2;
+
+    // Top Face (Starts as flat paper, spins)
+    final topPath = Path();
+    topPath.moveTo(center.dx, center.dy - radius * 0.5);
+    topPath.lineTo(center.dx + radius * 0.866, center.dy - radius * 0.1);
+    topPath.lineTo(center.dx, center.dy + radius * 0.3);
+    topPath.lineTo(center.dx - radius * 0.866, center.dy - radius * 0.1);
+    topPath.close();
+
+    // Left Face (Hinges down from the left edge of the top face)
+    final leftPath = Path();
+    leftPath.moveTo(center.dx, center.dy + radius * 0.3);
+    leftPath.lineTo(center.dx - radius * 0.866, center.dy - radius * 0.1);
+    leftPath.lineTo(center.dx - radius * 0.866, center.dy + radius * (0.8 * progress - 0.1));
+    leftPath.lineTo(center.dx, center.dy + radius * (0.3 + 0.8 * progress));
+    leftPath.close();
+
+    // Right Face (Hinges down from the right edge of the top face)
+    final rightPath = Path();
+    rightPath.moveTo(center.dx, center.dy + radius * 0.3);
+    rightPath.lineTo(center.dx + radius * 0.866, center.dy - radius * 0.1);
+    rightPath.lineTo(center.dx + radius * 0.866, center.dy + radius * (0.8 * progress - 0.1));
+    rightPath.lineTo(center.dx, center.dy + radius * (0.3 + 0.8 * progress));
+    rightPath.close();
+
+    final paintTop = Paint()..color = color.withOpacity(0.9)..style = PaintingStyle.fill;
+    final paintLeft = Paint()..color = color.withOpacity(0.6)..style = PaintingStyle.fill;
+    final paintRight = Paint()..color = color.withOpacity(0.3)..style = PaintingStyle.fill;
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(progress * math.pi); // Spin 180 degrees while folding
+    canvas.scale(0.6 + progress * 0.4); // Grow from 60% size to full isometric cube
+    canvas.translate(-center.dx, -center.dy);
+
+    canvas.drawPath(topPath, paintTop);
+    if (progress > 0.01) { // Only draw sides if they have started folding
+      canvas.drawPath(leftPath, paintLeft);
+      canvas.drawPath(rightPath, paintRight);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant FoldableCubePainter oldDelegate) => oldDelegate.progress != progress;
+}
+
+// ==========================================
+// 1. SPLASH SCREEN
+// ==========================================
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -106,32 +208,39 @@ class _SplashScreenState extends State<SplashScreen>
                   opacity: _fadeAnimation,
                   child: ScaleTransition(
                     scale: _scaleAnimation,
-                    child: AnimatedBuilder(
-                      animation: _gradientController,
-                      builder: (context, child) {
-                        return ShaderMask(
-                          blendMode: BlendMode.srcIn,
-                          shaderCallback: (bounds) {
-                            return LinearGradient(
-                              colors: const [
-                                Color(0xFFE947F5),
-                                Color(0xFF2F4BA2),
-                                Color(0xFFE947F5)
-                              ],
-                              stops: const [0.0, 0.5, 1.0],
-                              begin: Alignment(
-                                  -2.0 + (_gradientController.value * 2), 0),
-                              end: Alignment(
-                                  0.0 + (_gradientController.value * 2), 0),
-                            ).createShader(bounds);
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CubeFoldingLogo(size: 80),
+                        const SizedBox(height: 24),
+                        AnimatedBuilder(
+                          animation: _gradientController,
+                          builder: (context, child) {
+                            return ShaderMask(
+                              blendMode: BlendMode.srcIn,
+                              shaderCallback: (bounds) {
+                                return LinearGradient(
+                                  colors: const [
+                                    Color(0xFFE947F5),
+                                    Color(0xFF2F4BA2),
+                                    Color(0xFFE947F5)
+                                  ],
+                                  stops: const [0.0, 0.5, 1.0],
+                                  begin: Alignment(
+                                      -2.0 + (_gradientController.value * 2), 0),
+                                  end: Alignment(
+                                      0.0 + (_gradientController.value * 2), 0),
+                                ).createShader(bounds);
+                              },
+                              child: const Text("PEERSPACE",
+                                  style: TextStyle(
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 2)),
+                            );
                           },
-                          child: const Text("PEERSPACE",
-                              style: TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 2)),
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -144,7 +253,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// --- 1. SHADCN REACT-STYLE FLOATING LINES (NATIVE FLUTTER) ---
+// ==========================================
+// 2. BACKGROUND & SHADCN FLOATING LINES
+// ==========================================
+
 class FloatingLinesBackground extends StatefulWidget {
   final Widget child;
   const FloatingLinesBackground({super.key, required this.child});
@@ -194,14 +306,12 @@ class _FloatingLinesBackgroundState extends State<FloatingLinesBackground>
 
 class _FloatingLinesPainter extends CustomPainter {
   final double time;
-
   _FloatingLinesPainter(this.time);
 
   @override
   void paint(Canvas canvas, Size size) {
     final Color pink = const Color(0xFFE947F5);
     final Color blue = const Color(0xFF2F4BA2);
-
     final Rect rect = Offset.zero & size;
     final Gradient gradient = LinearGradient(
       colors: [blue.withOpacity(0.8), pink.withOpacity(0.8)],
@@ -216,46 +326,38 @@ class _FloatingLinesPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
 
-    _drawWaveGroup(canvas, size, paint,
-        waveOffset: 0.3, waveHeight: 0.15, speedMulti: 1.0, lines: 6);
-    _drawWaveGroup(canvas, size, paint,
-        waveOffset: 0.6, waveHeight: 0.20, speedMulti: -0.8, lines: 4);
-    _drawWaveGroup(canvas, size, paint,
-        waveOffset: 0.8, waveHeight: 0.10, speedMulti: 1.2, lines: 5);
+    _drawWaveGroup(canvas, size, paint, waveOffset: 0.3, waveHeight: 0.15, speedMulti: 1.0, lines: 6);
+    _drawWaveGroup(canvas, size, paint, waveOffset: 0.6, waveHeight: 0.20, speedMulti: -0.8, lines: 4);
+    _drawWaveGroup(canvas, size, paint, waveOffset: 0.8, waveHeight: 0.10, speedMulti: 1.2, lines: 5);
   }
 
   void _drawWaveGroup(Canvas canvas, Size size, Paint paint,
-      {required double waveOffset,
-      required double waveHeight,
-      required double speedMulti,
-      required int lines}) {
+      {required double waveOffset, required double waveHeight, required double speedMulti, required int lines}) {
     for (int i = 0; i < lines; i++) {
       final path = Path();
       final baseY = size.height * waveOffset + (i * 25);
       final frequency = 0.002 + (i * 0.0002);
       final amplitude = size.height * waveHeight + (i * 5);
-
       final phaseShift = (time * math.pi * 2 * speedMulti) + (i * 0.4);
 
       path.moveTo(0, baseY);
-
       for (double x = 0; x <= size.width; x += 5) {
         final y = baseY + math.sin((x * frequency) + phaseShift) * amplitude;
         path.lineTo(x, y);
       }
-
       paint.maskFilter = MaskFilter.blur(BlurStyle.solid, 1.5 + (i * 0.5));
       canvas.drawPath(path, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _FloatingLinesPainter oldDelegate) {
-    return oldDelegate.time != time;
-  }
+  bool shouldRepaint(covariant _FloatingLinesPainter oldDelegate) => oldDelegate.time != time;
 }
 
-// --- 2. LOGIN SCREEN ---
+// ==========================================
+// 3. LOGIN SCREEN
+// ==========================================
+
 class ProfileLoginScreen extends StatefulWidget {
   const ProfileLoginScreen({super.key});
 
@@ -281,11 +383,12 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
       body: FloatingLinesBackground(
         child: SafeArea(
           child: SingleChildScrollView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 32.0, vertical: 80.0),
+            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 80.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const CubeFoldingLogo(size: 60),
+                const SizedBox(height: 16),
                 ShaderMask(
                   blendMode: BlendMode.srcIn,
                   shaderCallback: (bounds) => const LinearGradient(
@@ -400,7 +503,10 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
   }
 }
 
-// --- 3. CHAT ROOMS SCREEN (FLOATING GLASS HEADER) ---
+// ==========================================
+// 4. CHAT ROOMS SCREEN (SPACES & TAGS)
+// ==========================================
+
 class ChatRoomsScreen extends StatefulWidget {
   const ChatRoomsScreen({super.key});
 
@@ -409,19 +515,22 @@ class ChatRoomsScreen extends StatefulWidget {
 }
 
 class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
-  // Dynamic list of rooms
   final List<Map<String, dynamic>> _rooms = [
     {
       "title": "System Architecture",
       "msg": "Let's review the PostgreSQL schema.",
-      "time": "12:00 PM"
+      "time": "12:00 PM",
+      "tags": ["Tech", "Study"]
     },
     {
-      "title": "Frontend Development",
-      "msg": "The floating glass bar looks amazing.",
-      "time": "10:45 AM"
+      "title": "Global Events",
+      "msg": "Crazy news from last night's rally.",
+      "time": "10:45 AM",
+      "tags": ["Politics", "Casual"]
     },
   ];
+
+  final List<String> _availableTags = ['Study', 'Politics', 'Tech', 'Casual', 'Entertainment'];
 
   void _showProfileMenu(BuildContext context) {
     showGeneralDialog(
@@ -434,45 +543,30 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
           child: Material(
             color: Colors.transparent,
             child: Container(
-              margin: const EdgeInsets.only(
-                  top: 100, right: 16), // Adjusted for floating header
+              margin: const EdgeInsets.only(top: 100, right: 16),
               width: 220,
               decoration: BoxDecoration(
                   color: const Color(0xFF161824).withOpacity(0.95),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: const Color(0xFF2F4BA2).withOpacity(0.3))),
+                  border: Border.all(color: const Color(0xFF2F4BA2).withOpacity(0.3))),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.person_outline,
-                        color: Color(0xFFE947F5)),
-                    title: const Text('View Profile',
-                        style: TextStyle(color: Colors.white)),
-                    onTap: () async {
+                    leading: const Icon(Icons.person_outline, color: Color(0xFFE947F5)),
+                    title: const Text('View Profile', style: TextStyle(color: Colors.white)),
+                    onTap: () {
                       Navigator.pop(context);
-                      await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const ProfilePictureScreen()));
-                      // Rebuild when returning to show updated profile name/pic
-                      setState(() {});
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfilePictureScreen()));
                     },
                   ),
                   const Divider(color: Colors.white10, height: 1),
                   ListTile(
-                    leading: const Icon(Icons.settings_outlined,
-                        color: Color(0xFF2F4BA2)),
-                    title: const Text('Settings',
-                        style: TextStyle(color: Colors.white)),
+                    leading: const Icon(Icons.settings_outlined, color: Color(0xFF2F4BA2)),
+                    title: const Text('Settings', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SettingsScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
                     },
                   ),
                 ],
@@ -486,87 +580,107 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
 
   void _createNewRoom() {
     final TextEditingController newRoomController = TextEditingController();
+    List<String> selectedTags = [];
+
     showDialog(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            backgroundColor: const Color(0xFF161824),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text("Create New Space",
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
-            content: TextField(
-              controller: newRoomController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: "Enter space name...",
-                hintStyle: const TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel",
-                    style: TextStyle(color: Colors.white54)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE947F5),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+          return StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return AlertDialog(
+                backgroundColor: const Color(0xFF161824),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text("Create New Space", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: newRoomController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: "Enter space name...",
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.05),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text("Select Topics (Tags):", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 4.0,
+                      children: _availableTags.map((tag) {
+                        final isSelected = selectedTags.contains(tag);
+                        return FilterChip(
+                          label: Text(tag, style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 12)),
+                          selected: isSelected,
+                          selectedColor: const Color(0xFFE947F5).withOpacity(0.4),
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                          checkmarkColor: Colors.white,
+                          onSelected: (bool selected) {
+                            setStateDialog(() {
+                              if (selected) {
+                                selectedTags.add(tag);
+                              } else {
+                                selectedTags.remove(tag);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ),
-                onPressed: () {
-                  if (newRoomController.text.trim().isNotEmpty) {
-                    setState(() {
-                      _rooms.insert(0, {
-                        "title": newRoomController.text.trim(),
-                        "msg": "Space created! Start chatting.",
-                        "time": "Just now",
-                      });
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text("Create",
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ],
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE947F5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      if (newRoomController.text.trim().isNotEmpty) {
+                        setState(() {
+                          _rooms.insert(0, {
+                            "title": newRoomController.text.trim(),
+                            "msg": "Space created! Start chatting.",
+                            "time": "Just now",
+                            "tags": List.from(selectedTags)
+                          });
+                        });
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text("Create", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              );
+            }
           );
         });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get just the first name for the header
-    String shortName = globalUsername.split(' ').first;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0D0E15),
       body: Stack(
         children: [
-          // 1. The Scrollable List (starts underneath the glass header)
           ListView.builder(
-            padding: const EdgeInsets.only(
-                top: 120, left: 16, right: 16, bottom: 100),
+            padding: const EdgeInsets.only(top: 120, left: 16, right: 16, bottom: 100),
             itemCount: _rooms.length,
             itemBuilder: (context, index) {
               final room = _rooms[index];
-              final accentColor = index % 2 == 0
-                  ? const Color(0xFFE947F5)
-                  : const Color(0xFF2F4BA2);
-              return _chatTile(context, room["title"], room["msg"],
-                  room["time"], accentColor);
+              final accentColor = index % 2 == 0 ? const Color(0xFFE947F5) : const Color(0xFF2F4BA2);
+              return _chatTile(context, room["title"], room["msg"], room["time"], room["tags"] ?? [], accentColor);
             },
           ),
-
-          // 2. The Floating Glass Header
           Positioned(
             top: 0,
             left: 0,
@@ -574,99 +688,56 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       decoration: BoxDecoration(
-                          color: Colors.white
-                              .withOpacity(0.05), // Frosted glass tint
+                          color: Colors.white.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.15),
-                              width: 1.5),
+                          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
                           boxShadow: [
-                            BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                spreadRadius: 1)
+                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, spreadRadius: 1)
                           ]),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Glass Font for "Hi"
-                          Text(
-                            "Hi 👋",
-                            style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white.withOpacity(0.9),
-                                shadows: [
-                                  Shadow(
-                                      color: Colors.white.withOpacity(0.6),
-                                      blurRadius: 8),
-                                ]),
-                          ),
+                          const CubeFoldingLogo(size: 30),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.shield_outlined,
-                                  size: 16, color: Colors.white54),
+                              const Icon(Icons.shield_outlined, size: 16, color: Colors.white54),
                               const SizedBox(width: 4),
                               Switch(
                                 value: globalAiModerationEnabled,
                                 onChanged: (val) {
-                                  setState(
-                                      () => globalAiModerationEnabled = val);
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(SnackBar(
-                                    content: Text(val
-                                        ? "AI Moderation Enabled"
-                                        : "AI Moderation Disabled"),
+                                  setState(() => globalAiModerationEnabled = val);
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(val ? "AI Moderation Enabled" : "AI Moderation Disabled"),
                                     duration: const Duration(seconds: 1),
                                     backgroundColor: const Color(0xFF2F4BA2),
                                   ));
                                 },
                                 activeColor: const Color(0xFFE947F5),
-                                activeTrackColor:
-                                    const Color(0xFFE947F5).withOpacity(0.4),
+                                activeTrackColor: const Color(0xFFE947F5).withOpacity(0.4),
                                 inactiveThumbColor: Colors.grey[500],
                                 inactiveTrackColor: Colors.grey[800],
                               ),
                               const SizedBox(width: 8),
-                              // Glass Font for the name
-                              Text(shortName,
-                                  style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                      shadows: [
-                                        Shadow(
-                                            color:
-                                                Colors.white.withOpacity(0.5),
-                                            blurRadius: 4)
-                                      ])),
-                              const SizedBox(width: 12),
                               GestureDetector(
                                 onTap: () => _showProfileMenu(context),
                                 child: Container(
                                   padding: const EdgeInsets.all(2),
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: LinearGradient(colors: [
-                                      Color(0xFFE947F5),
-                                      Color(0xFF2F4BA2)
-                                    ]),
+                                    gradient: LinearGradient(colors: [Color(0xFFE947F5), Color(0xFF2F4BA2)]),
                                   ),
-                                  child: CircleAvatar(
+                                  child: const CircleAvatar(
                                     radius: 16,
-                                    backgroundImage:
-                                        NetworkImage(globalProfilePicUrl),
+                                    backgroundImage: NetworkImage('https://i.scdn.co/image/ab67616d0000b273d9985092cd88bffd97653b58'),
                                   ),
                                 ),
                               ),
@@ -680,8 +751,6 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
               ),
             ),
           ),
-
-          // 3. Floating Action Button
           Positioned(
             bottom: 30,
             right: 20,
@@ -698,8 +767,7 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
     );
   }
 
-  Widget _chatTile(BuildContext context, String title, String msg, String time,
-      Color accentColor) {
+  Widget _chatTile(BuildContext context, String title, String msg, String time, List<String> tags, Color accentColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -707,43 +775,232 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: accentColor.withOpacity(0.2))),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: accentColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
+          width: 50, height: 50,
+          decoration: BoxDecoration(color: accentColor.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
           child: Center(
               child: Text(title.isNotEmpty ? title[0].toUpperCase() : "?",
-                  style: TextStyle(
-                      color: accentColor,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800))),
+                  style: TextStyle(color: accentColor, fontSize: 20, fontWeight: FontWeight.w800))),
         ),
-        title: Text(title,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.white)),
-        subtitle: Text(msg,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white54, fontSize: 14)),
-        trailing: Text(time,
-            style: const TextStyle(color: Colors.white38, fontSize: 12)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(msg, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+            if (tags.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                children: tags.map((t) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                  child: Text(t, style: const TextStyle(fontSize: 10, color: Colors.white70)),
+                )).toList()
+              )
+            ]
+          ],
+        ),
+        trailing: Text(time, style: const TextStyle(color: Colors.white38, fontSize: 12)),
         onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) => PeerspaceChatScreen(roomName: title))),
+                builder: (context) => PeerspaceChatScreen(roomName: title, tags: tags))),
       ),
     );
   }
 }
 
-// --- 4. TILTED PROFILE PICTURE SCREEN ---
+// ==========================================
+// 5. CHAT SCREEN (AI FILTERING & MULTILINE KEYS)
+// ==========================================
+
+class PeerspaceChatScreen extends StatefulWidget {
+  final String roomName;
+  final List<String> tags; // Tags map to boundaries 
+
+  const PeerspaceChatScreen({super.key, required this.roomName, required this.tags});
+
+  @override
+  State<PeerspaceChatScreen> createState() => _PeerspaceChatScreenState();
+}
+
+class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final List<Map<String, dynamic>> _messages = [];
+  bool _isTyping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() => _isTyping = _controller.text.isNotEmpty));
+
+    // Listen to hardware keyboard inputs
+    _focusNode.onKeyEvent = (FocusNode node, KeyEvent event) {
+      if (event is KeyDownEvent) {
+        if (event.logicalKey == LogicalKeyboardKey.enter) {
+          if (HardwareKeyboard.instance.isShiftPressed) {
+            // Shift + Enter: Allow the newline to pass through to the TextField
+            return KeyEventResult.ignored; 
+          } else {
+            // Enter only: Send the message
+            _handleSend();
+            return KeyEventResult.handled;
+          }
+        }
+      }
+      return KeyEventResult.ignored;
+    };
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleSend() {
+    if (_controller.text.trim().isEmpty) return;
+    String text = _controller.text.trim();
+
+    if (globalAiModerationEnabled) {
+      // Validating against Group Topic-Based Boundaries [cite: 20, 34]
+      bool isAbusive = text.toLowerCase().contains("spam") || text.toLowerCase().contains("badword");
+      bool isOffTopic = false;
+      String blockReason = "Off-topic discussion.";
+
+      // Boundary rules based on assigned space tags
+      if (widget.tags.contains("Study") && (text.toLowerCase().contains("movie") || text.toLowerCase().contains("cinema"))) {
+        isOffTopic = true;
+        blockReason = "Cinema and Entertainment topics are strictly prohibited in Study spaces."; // 
+      } else if (!widget.tags.contains("Politics") && text.toLowerCase().contains("politics")) {
+        isOffTopic = true;
+        blockReason = "Political debates are outside the scope of this learning community."; // 
+      } else if (!widget.tags.contains("Tech") && text.toLowerCase().contains("code")) {
+        isOffTopic = true;
+        blockReason = "Tech-related boundaries configured. Please post in a Tech space."; 
+      }
+
+      if (isAbusive || isOffTopic) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFE947F5),
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Blocked by AI: ${isAbusive ? 'Policy violation.' : blockReason}",
+                  style: const TextStyle(fontWeight: FontWeight.bold))),
+            ],
+          ),
+        ));
+        return;
+      }
+    }
+
+    setState(() => _messages.add({"text": text, "isMe": true}));
+    _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0E15),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF161824),
+        elevation: 1, shadowColor: Colors.black,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.roomName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(widget.tags.join(" • "), style: const TextStyle(fontSize: 12, color: Color(0xFFE947F5))),
+          ],
+        )
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+                return Align(
+                  alignment: msg["isMe"] ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: msg["isMe"] ? const LinearGradient(colors: [Color(0xFF2F4BA2), Color(0xFF1D306D)]) : null,
+                      color: msg["isMe"] ? null : Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: msg["isMe"] ? Colors.transparent : Colors.white10),
+                    ),
+                    child: Text(msg["text"], style: const TextStyle(color: Colors.white, fontSize: 16)),
+                  ),
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: const BoxDecoration(
+              color: Color(0xFF161824),
+              border: Border(top: BorderSide(color: Colors.white10)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end, // Align to bottom for multiline
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    minLines: 1,
+                    maxLines: 5, // Supports Multiline Input
+                    textInputAction: TextInputAction.newline, 
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: "Message ${widget.roomName}...",
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.03),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _handleSend,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    margin: const EdgeInsets.only(bottom: 2), // Align visually with text box bottom
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isTyping ? const Color(0xFFE947F5) : Colors.white.withOpacity(0.1),
+                      boxShadow: _isTyping ? [BoxShadow(color: const Color(0xFFE947F5).withOpacity(0.4), blurRadius: 10, spreadRadius: 2)] : null,
+                    ),
+                    child: Icon(Icons.send, color: _isTyping ? Colors.white : Colors.white54, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 6. TILTED PROFILE PICTURE SCREEN
+// ==========================================
+
 class ProfilePictureScreen extends StatefulWidget {
   const ProfilePictureScreen({super.key});
 
@@ -803,101 +1060,6 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
     super.dispose();
   }
 
-  void _editUsername() {
-    final TextEditingController controller =
-        TextEditingController(text: globalUsername);
-    showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            backgroundColor: const Color(0xFF161824),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text("Change Username",
-                style: TextStyle(color: Colors.white)),
-            content: TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel",
-                      style: TextStyle(color: Colors.white54))),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE947F5)),
-                onPressed: () {
-                  if (controller.text.trim().isNotEmpty) {
-                    setState(() => globalUsername = controller.text.trim());
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text("Save",
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-              )
-            ],
-          );
-        });
-  }
-
-  void _editProfilePic() {
-    final TextEditingController controller =
-        TextEditingController(text: globalProfilePicUrl);
-    showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            backgroundColor: const Color(0xFF161824),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text("Change Profile Picture",
-                style: TextStyle(color: Colors.white)),
-            content: TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: "Enter Image URL...",
-                hintStyle: const TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel",
-                      style: TextStyle(color: Colors.white54))),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2F4BA2)),
-                onPressed: () {
-                  if (controller.text.trim().isNotEmpty) {
-                    setState(
-                        () => globalProfilePicUrl = controller.text.trim());
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text("Save",
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-              )
-            ],
-          );
-        });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -906,107 +1068,70 @@ class _ProfilePictureScreenState extends State<ProfilePictureScreen>
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: const Text("Profile Details", style: TextStyle(fontSize: 16))),
-      body: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: LayoutBuilder(builder: (context, constraints) {
-                return GestureDetector(
-                  onPanUpdate: (details) => _onPanUpdate(details, constraints),
-                  onPanEnd: _onPanEnd,
-                  child: Transform(
-                    alignment: FractionalOffset.center,
-                    transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.001)
-                      ..rotateX(xRotation)
-                      ..rotateY(yRotation),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 300,
-                          height: 300,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                  color:
-                                      const Color(0xFFE947F5).withOpacity(0.3),
-                                  blurRadius: 40,
-                                  spreadRadius: 2)
-                            ],
-                            image: DecorationImage(
-                              image: NetworkImage(globalProfilePicUrl),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        Transform.translate(
-                          offset: Offset(yRotation * 50, -xRotation * 50),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF161824).withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color:
-                                      const Color(0xFF2F4BA2).withOpacity(0.5)),
-                            ),
-                            child: Text("$globalUsername • 25brs1104",
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ),
+      body: Center(
+        child: LayoutBuilder(builder: (context, constraints) {
+          return GestureDetector(
+            onPanUpdate: (details) => _onPanUpdate(details, constraints),
+            onPanEnd: _onPanEnd,
+            child: Transform(
+              alignment: FractionalOffset.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.001)
+                ..rotateX(xRotation)
+                ..rotateY(yRotation),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                            color: const Color(0xFFE947F5).withOpacity(0.3),
+                            blurRadius: 40,
+                            spreadRadius: 2)
                       ],
+                      image: const DecorationImage(
+                        image: NetworkImage(
+                            'https://i.scdn.co/image/ab67616d0000b273d9985092cd88bffd97653b58'),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                );
-              }),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 60.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF161824),
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: const Color(0xFFE947F5).withOpacity(0.5)),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  Transform.translate(
+                    offset: Offset(yRotation * 50, -xRotation * 50),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF161824).withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: const Color(0xFF2F4BA2).withOpacity(0.5)),
+                      ),
+                      child: const Text("Ansh Pathak • 25brs1104",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold)),
+                    ),
                   ),
-                  onPressed: _editUsername,
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: const Text("Edit Name"),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF161824),
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: const Color(0xFF2F4BA2).withOpacity(0.5)),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: _editProfilePic,
-                  icon: const Icon(Icons.image, size: 18),
-                  label: const Text("Edit Picture"),
-                ),
-              ],
+                ],
+              ),
             ),
-          )
-        ],
+          );
+        }),
       ),
     );
   }
 }
 
-// --- 5. SETTINGS SCREEN ---
+// ==========================================
+// 7. SETTINGS SCREEN
+// ==========================================
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -1096,203 +1221,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.white,
                       fontWeight: FontWeight.w500))),
           const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white38),
-        ],
-      ),
-    );
-  }
-}
-
-// --- 6. CHAT SCREEN ---
-class PeerspaceChatScreen extends StatefulWidget {
-  final String roomName;
-  const PeerspaceChatScreen({super.key, required this.roomName});
-
-  @override
-  State<PeerspaceChatScreen> createState() => _PeerspaceChatScreenState();
-}
-
-class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
-  final List<Map<String, dynamic>> _messages = [];
-  bool _isTyping = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.addListener(
-        () => setState(() => _isTyping = _controller.text.isNotEmpty));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _handleSend() {
-    if (_controller.text.trim().isEmpty) return;
-    String text = _controller.text.trim();
-
-    if (globalAiModerationEnabled) {
-      bool isAbusive = text.toLowerCase().contains("spam") ||
-          text.toLowerCase().contains("badword");
-      bool isOffTopic = text.toLowerCase().contains("movie") ||
-          text.toLowerCase().contains("politics");
-
-      if (isAbusive || isOffTopic) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFE947F5),
-          content: Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded,
-                  color: Colors.white, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Text(
-                      "Blocked by AI: ${isAbusive ? 'Policy violation.' : 'Off-topic discussion.'}",
-                      style: const TextStyle(fontWeight: FontWeight.bold))),
-            ],
-          ),
-        ));
-        return;
-      }
-    }
-
-    setState(() => _messages.add({"text": text, "isMe": true}));
-    _controller.clear();
-    // Maintain focus on the text field after sending
-    _focusNode.requestFocus();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
-      appBar: AppBar(
-          backgroundColor: const Color(0xFF161824),
-          elevation: 1,
-          shadowColor: Colors.black,
-          title: Text(widget.roomName,
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white))),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return Align(
-                  alignment: msg["isMe"]
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: msg["isMe"]
-                          ? const LinearGradient(
-                              colors: [Color(0xFF2F4BA2), Color(0xFF1D306D)])
-                          : null,
-                      color:
-                          msg["isMe"] ? null : Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: msg["isMe"]
-                              ? Colors.transparent
-                              : Colors.white10),
-                    ),
-                    child: Text(msg["text"],
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 16)),
-                  ),
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            decoration: const BoxDecoration(
-              color: Color(0xFF161824),
-              border: Border(top: BorderSide(color: Colors.white10)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  // Focus widget detects keyboard events like Enter vs Shift+Enter
-                  child: Focus(
-                    onKeyEvent: (FocusNode node, KeyEvent event) {
-                      if (event is KeyDownEvent &&
-                          event.logicalKey == LogicalKeyboardKey.enter) {
-                        if (HardwareKeyboard.instance.isShiftPressed) {
-                          // Allow the newline to pass through to the TextField
-                          return KeyEventResult.ignored;
-                        } else {
-                          // Send message and consume the event so it doesn't create a newline
-                          _handleSend();
-                          return KeyEventResult.handled;
-                        }
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      minLines: 1,
-                      maxLines: 5, // allows the box to grow with shift+enter
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
-                      decoration: InputDecoration(
-                        hintText: "Message ${widget.roomName}...",
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.03),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 14),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: _handleSend,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    margin: const EdgeInsets.only(bottom: 2), // align with bottom of input box
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isTyping
-                          ? const Color(0xFFE947F5)
-                          : Colors.white.withOpacity(0.1),
-                      boxShadow: _isTyping
-                          ? [
-                              BoxShadow(
-                                  color:
-                                      const Color(0xFFE947F5).withOpacity(0.4),
-                                  blurRadius: 10,
-                                  spreadRadius: 2)
-                            ]
-                          : null,
-                    ),
-                    child: Icon(Icons.send,
-                        color: _isTyping ? Colors.white : Colors.white54,
-                        size: 20),
-                  ),
-                ),
-              ],
-            ),
-          )
         ],
       ),
     );

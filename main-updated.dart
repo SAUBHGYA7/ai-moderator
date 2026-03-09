@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-
+//ansh ek number ka mota mc hai
 // --- GLOBAL STATE ---
 bool globalAiModerationEnabled = true;
 String globalUsername = "Ansh Pathak";

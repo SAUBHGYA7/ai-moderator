@@ -22,8 +22,8 @@ class PeerspaceApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0D0E15),
         fontFamily: 'Roboto',
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFE947F5),
-          secondary: Color(0xFF2F4BA2),
+          primary: Color(0xFFE947F5), // Purplish Pink
+          secondary: Color(0xFF2F4BA2), // Deep Blue
           surface: Color(0xFF161824),
         ),
       ),
@@ -34,24 +34,28 @@ class PeerspaceApp extends StatelessWidget {
 }
 
 // ==========================================
-// 0. NEW PAPER-TO-CUBE FOLDING LOGO
+// 0. PAPER-TO-CUBE FOLDING LOGO
 // ==========================================
 class CubeFoldingLogo extends StatefulWidget {
   final double size;
   final Color color;
-  const CubeFoldingLogo({super.key, this.size = 50, this.color = const Color(0xFFE947F5)});
+  const CubeFoldingLogo(
+      {super.key, this.size = 50, this.color = const Color(0xFFE947F5)});
 
   @override
   State<CubeFoldingLogo> createState() => _CubeFoldingLogoState();
 }
 
-class _CubeFoldingLogoState extends State<CubeFoldingLogo> with SingleTickerProviderStateMixin {
+class _CubeFoldingLogoState extends State<CubeFoldingLogo>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 2))
+          ..repeat(reverse: true);
   }
 
   @override
@@ -68,7 +72,6 @@ class _CubeFoldingLogoState extends State<CubeFoldingLogo> with SingleTickerProv
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          // Use an ease curve to make the fold snap nicely
           double progress = Curves.easeInOutCubic.transform(_controller.value);
           return CustomPaint(
             painter: FoldableCubePainter(progress, widget.color),
@@ -90,42 +93,47 @@ class FoldableCubePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2.2;
 
-    // Top Face (Starts as flat paper, spins)
-    final topPath = Path();
-    topPath.moveTo(center.dx, center.dy - radius * 0.5);
-    topPath.lineTo(center.dx + radius * 0.866, center.dy - radius * 0.1);
-    topPath.lineTo(center.dx, center.dy + radius * 0.3);
-    topPath.lineTo(center.dx - radius * 0.866, center.dy - radius * 0.1);
-    topPath.close();
+    final topPath = Path()
+      ..moveTo(center.dx, center.dy - radius * 0.5)
+      ..lineTo(center.dx + radius * 0.866, center.dy - radius * 0.1)
+      ..lineTo(center.dx, center.dy + radius * 0.3)
+      ..lineTo(center.dx - radius * 0.866, center.dy - radius * 0.1)
+      ..close();
 
-    // Left Face (Hinges down from the left edge of the top face)
-    final leftPath = Path();
-    leftPath.moveTo(center.dx, center.dy + radius * 0.3);
-    leftPath.lineTo(center.dx - radius * 0.866, center.dy - radius * 0.1);
-    leftPath.lineTo(center.dx - radius * 0.866, center.dy + radius * (0.8 * progress - 0.1));
-    leftPath.lineTo(center.dx, center.dy + radius * (0.3 + 0.8 * progress));
-    leftPath.close();
+    final leftPath = Path()
+      ..moveTo(center.dx, center.dy + radius * 0.3)
+      ..lineTo(center.dx - radius * 0.866, center.dy - radius * 0.1)
+      ..lineTo(center.dx - radius * 0.866,
+          center.dy + radius * (0.8 * progress - 0.1))
+      ..lineTo(center.dx, center.dy + radius * (0.3 + 0.8 * progress))
+      ..close();
 
-    // Right Face (Hinges down from the right edge of the top face)
-    final rightPath = Path();
-    rightPath.moveTo(center.dx, center.dy + radius * 0.3);
-    rightPath.lineTo(center.dx + radius * 0.866, center.dy - radius * 0.1);
-    rightPath.lineTo(center.dx + radius * 0.866, center.dy + radius * (0.8 * progress - 0.1));
-    rightPath.lineTo(center.dx, center.dy + radius * (0.3 + 0.8 * progress));
-    rightPath.close();
+    final rightPath = Path()
+      ..moveTo(center.dx, center.dy + radius * 0.3)
+      ..lineTo(center.dx + radius * 0.866, center.dy - radius * 0.1)
+      ..lineTo(center.dx + radius * 0.866,
+          center.dy + radius * (0.8 * progress - 0.1))
+      ..lineTo(center.dx, center.dy + radius * (0.3 + 0.8 * progress))
+      ..close();
 
-    final paintTop = Paint()..color = color.withOpacity(0.9)..style = PaintingStyle.fill;
-    final paintLeft = Paint()..color = color.withOpacity(0.6)..style = PaintingStyle.fill;
-    final paintRight = Paint()..color = color.withOpacity(0.3)..style = PaintingStyle.fill;
+    final paintTop = Paint()
+      ..color = color.withOpacity(0.9)
+      ..style = PaintingStyle.fill;
+    final paintLeft = Paint()
+      ..color = color.withOpacity(0.6)
+      ..style = PaintingStyle.fill;
+    final paintRight = Paint()
+      ..color = color.withOpacity(0.3)
+      ..style = PaintingStyle.fill;
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(progress * math.pi); // Spin 180 degrees while folding
-    canvas.scale(0.6 + progress * 0.4); // Grow from 60% size to full isometric cube
+    canvas.rotate(progress * math.pi);
+    canvas.scale(0.6 + progress * 0.4);
     canvas.translate(-center.dx, -center.dy);
 
     canvas.drawPath(topPath, paintTop);
-    if (progress > 0.01) { // Only draw sides if they have started folding
+    if (progress > 0.01) {
       canvas.drawPath(leftPath, paintLeft);
       canvas.drawPath(rightPath, paintRight);
     }
@@ -133,11 +141,271 @@ class FoldableCubePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant FoldableCubePainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant FoldableCubePainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 // ==========================================
-// 1. SPLASH SCREEN
+// 1. BACKGROUNDS: FLOATING LINES & DARK VEIL
+// ==========================================
+
+class FloatingLinesBackground extends StatefulWidget {
+  final Widget child;
+  const FloatingLinesBackground({super.key, required this.child});
+
+  @override
+  State<FloatingLinesBackground> createState() =>
+      _FloatingLinesBackgroundState();
+}
+
+class _FloatingLinesBackgroundState extends State<FloatingLinesBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 8))
+          ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(color: const Color(0xFF05050A)),
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return CustomPaint(
+              painter: _FloatingLinesPainter(_controller.value),
+              size: Size.infinite,
+            );
+          },
+        ),
+        widget.child,
+      ],
+    );
+  }
+}
+
+class _FloatingLinesPainter extends CustomPainter {
+  final double time;
+  _FloatingLinesPainter(this.time);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Color pink = const Color(0xFFE947F5);
+    final Color blue = const Color(0xFF2F4BA2);
+    final Rect rect = Offset.zero & size;
+    final Gradient gradient = LinearGradient(
+      colors: [blue.withOpacity(0.8), pink.withOpacity(0.8)],
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+    );
+
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    _drawWaveGroup(canvas, size, paint,
+        waveOffset: 0.3, waveHeight: 0.15, speedMulti: 1.0, lines: 6);
+    _drawWaveGroup(canvas, size, paint,
+        waveOffset: 0.6, waveHeight: 0.20, speedMulti: -0.8, lines: 4);
+    _drawWaveGroup(canvas, size, paint,
+        waveOffset: 0.8, waveHeight: 0.10, speedMulti: 1.2, lines: 5);
+  }
+
+  void _drawWaveGroup(Canvas canvas, Size size, Paint paint,
+      {required double waveOffset,
+      required double waveHeight,
+      required double speedMulti,
+      required int lines}) {
+    for (int i = 0; i < lines; i++) {
+      final path = Path();
+      final baseY = size.height * waveOffset + (i * 25);
+      final frequency = 0.002 + (i * 0.0002);
+      final amplitude = size.height * waveHeight + (i * 5);
+      final phaseShift = (time * math.pi * 2 * speedMulti) + (i * 0.4);
+
+      path.moveTo(0, baseY);
+      for (double x = 0; x <= size.width; x += 5) {
+        final y = baseY + math.sin((x * frequency) + phaseShift) * amplitude;
+        path.lineTo(x, y);
+      }
+      paint.maskFilter = MaskFilter.blur(BlurStyle.solid, 1.5 + (i * 0.5));
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FloatingLinesPainter oldDelegate) =>
+      oldDelegate.time != time;
+}
+
+// THE NEW DARK VEIL BACKGROUND FOR MAIN CHATS
+class DarkVeilBackground extends StatefulWidget {
+  final Widget child;
+  const DarkVeilBackground({super.key, required this.child});
+
+  @override
+  State<DarkVeilBackground> createState() => _DarkVeilBackgroundState();
+}
+
+class _DarkVeilBackgroundState extends State<DarkVeilBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 12))
+          ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(color: const Color(0xFF0D0E15)), 
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return CustomPaint(
+              painter: _DarkVeilPainter(_controller.value * math.pi * 2),
+              size: Size.infinite,
+            );
+          },
+        ),
+        widget.child,
+      ],
+    );
+  }
+}
+
+class _DarkVeilPainter extends CustomPainter {
+  final double time;
+  _DarkVeilPainter(this.time);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 120); // Extreme blur
+
+    // Deep Blue Blob
+    double x1 = size.width * (0.5 + 0.4 * math.sin(time * 0.7));
+    double y1 = size.height * (0.5 + 0.3 * math.cos(time * 0.5));
+    paint.color = const Color(0xFF2F4BA2).withOpacity(0.4);
+    canvas.drawCircle(Offset(x1, y1), size.width * 0.6, paint);
+
+    // Neon Pink Blob
+    double x2 = size.width * (0.5 + 0.3 * math.cos(time * 0.4));
+    double y2 = size.height * (0.5 + 0.4 * math.sin(time * 0.6));
+    paint.color = const Color(0xFFE947F5).withOpacity(0.3);
+    canvas.drawCircle(Offset(x2, y2), size.width * 0.5, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DarkVeilPainter oldDelegate) =>
+      oldDelegate.time != time;
+}
+
+// ==========================================
+// 2. SHINY HOVER TEXT WIDGET
+// ==========================================
+
+class ShinyHoverText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const ShinyHoverText({super.key, required this.text, required this.style});
+
+  @override
+  State<ShinyHoverText> createState() => _ShinyHoverTextState();
+}
+
+class _ShinyHoverTextState extends State<ShinyHoverText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _shinyController;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _shinyController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shinyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _shinyController.repeat();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _shinyController.stop();
+        _shinyController.reset();
+      },
+      child: AnimatedBuilder(
+        animation: _shinyController,
+        builder: (context, child) {
+          return ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) {
+              if (!_isHovered) {
+                return LinearGradient(colors: [
+                  widget.style.color ?? Colors.white,
+                  widget.style.color ?? Colors.white
+                ]).createShader(bounds);
+              }
+              return LinearGradient(
+                colors: [
+                  widget.style.color ?? Colors.white,
+                  Colors.white, // The shiny highlight
+                  widget.style.color ?? Colors.white,
+                ],
+                stops: const [0.0, 0.5, 1.0],
+                begin: Alignment(-2.0 + (_shinyController.value * 4), 0),
+                end: Alignment(0.0 + (_shinyController.value * 4), 0),
+              ).createShader(bounds);
+            },
+            child: Text(widget.text, style: widget.style),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 3. SPLASH & LOGIN SCREENS
 // ==========================================
 
 class SplashScreen extends StatefulWidget {
@@ -210,36 +478,8 @@ class _SplashScreenState extends State<SplashScreen>
                     scale: _scaleAnimation,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CubeFoldingLogo(size: 80),
-                        const SizedBox(height: 24),
-                        AnimatedBuilder(
-                          animation: _gradientController,
-                          builder: (context, child) {
-                            return ShaderMask(
-                              blendMode: BlendMode.srcIn,
-                              shaderCallback: (bounds) {
-                                return LinearGradient(
-                                  colors: const [
-                                    Color(0xFFE947F5),
-                                    Color(0xFF2F4BA2),
-                                    Color(0xFFE947F5)
-                                  ],
-                                  stops: const [0.0, 0.5, 1.0],
-                                  begin: Alignment(
-                                      -2.0 + (_gradientController.value * 2), 0),
-                                  end: Alignment(
-                                      0.0 + (_gradientController.value * 2), 0),
-                                ).createShader(bounds);
-                              },
-                              child: const Text("PEERSPACE",
-                                  style: TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 2)),
-                            );
-                          },
-                        ),
+                      children: const [
+                        CubeFoldingLogo(size: 100),
                       ],
                     ),
                   ),
@@ -252,111 +492,6 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-
-// ==========================================
-// 2. BACKGROUND & SHADCN FLOATING LINES
-// ==========================================
-
-class FloatingLinesBackground extends StatefulWidget {
-  final Widget child;
-  const FloatingLinesBackground({super.key, required this.child});
-
-  @override
-  State<FloatingLinesBackground> createState() =>
-      _FloatingLinesBackgroundState();
-}
-
-class _FloatingLinesBackgroundState extends State<FloatingLinesBackground>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: const Duration(seconds: 8))
-          ..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(color: const Color(0xFF05050A)),
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return CustomPaint(
-              painter: _FloatingLinesPainter(_controller.value),
-              size: Size.infinite,
-            );
-          },
-        ),
-        widget.child,
-      ],
-    );
-  }
-}
-
-class _FloatingLinesPainter extends CustomPainter {
-  final double time;
-  _FloatingLinesPainter(this.time);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Color pink = const Color(0xFFE947F5);
-    final Color blue = const Color(0xFF2F4BA2);
-    final Rect rect = Offset.zero & size;
-    final Gradient gradient = LinearGradient(
-      colors: [blue.withOpacity(0.8), pink.withOpacity(0.8)],
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-    );
-
-    final paint = Paint()
-      ..shader = gradient.createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round
-      ..isAntiAlias = true;
-
-    _drawWaveGroup(canvas, size, paint, waveOffset: 0.3, waveHeight: 0.15, speedMulti: 1.0, lines: 6);
-    _drawWaveGroup(canvas, size, paint, waveOffset: 0.6, waveHeight: 0.20, speedMulti: -0.8, lines: 4);
-    _drawWaveGroup(canvas, size, paint, waveOffset: 0.8, waveHeight: 0.10, speedMulti: 1.2, lines: 5);
-  }
-
-  void _drawWaveGroup(Canvas canvas, Size size, Paint paint,
-      {required double waveOffset, required double waveHeight, required double speedMulti, required int lines}) {
-    for (int i = 0; i < lines; i++) {
-      final path = Path();
-      final baseY = size.height * waveOffset + (i * 25);
-      final frequency = 0.002 + (i * 0.0002);
-      final amplitude = size.height * waveHeight + (i * 5);
-      final phaseShift = (time * math.pi * 2 * speedMulti) + (i * 0.4);
-
-      path.moveTo(0, baseY);
-      for (double x = 0; x <= size.width; x += 5) {
-        final y = baseY + math.sin((x * frequency) + phaseShift) * amplitude;
-        path.lineTo(x, y);
-      }
-      paint.maskFilter = MaskFilter.blur(BlurStyle.solid, 1.5 + (i * 0.5));
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _FloatingLinesPainter oldDelegate) => oldDelegate.time != time;
-}
-
-// ==========================================
-// 3. LOGIN SCREEN
-// ==========================================
 
 class ProfileLoginScreen extends StatefulWidget {
   const ProfileLoginScreen({super.key});
@@ -383,27 +518,27 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
       body: FloatingLinesBackground(
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 80.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 32.0, vertical: 60.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CubeFoldingLogo(size: 60),
-                const SizedBox(height: 16),
-                ShaderMask(
-                  blendMode: BlendMode.srcIn,
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFFE947F5), Color(0xFF2F4BA2)],
-                  ).createShader(bounds),
-                  child: const Text("PEERSPACE",
-                      style: TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5)),
+                const Center(
+                  child: CubeFoldingLogo(size: 80),
+                ),
+                const SizedBox(height: 32),
+                ShinyHoverText(
+                  text: "PEERSPACE",
+                  style: const TextStyle(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                      color: Color(0xFFE947F5)),
                 ),
                 const SizedBox(height: 8),
                 const Text("AI-Powered Communities.",
                     style: TextStyle(fontSize: 18, color: Colors.white70)),
-                const SizedBox(height: 56),
+                const SizedBox(height: 40),
                 Row(
                   children: [
                     Expanded(
@@ -504,7 +639,7 @@ class _ProfileLoginScreenState extends State<ProfileLoginScreen> {
 }
 
 // ==========================================
-// 4. CHAT ROOMS SCREEN (SPACES & TAGS)
+// 4. MAIN CHAT ROOMS SCREEN
 // ==========================================
 
 class ChatRoomsScreen extends StatefulWidget {
@@ -530,7 +665,9 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
     },
   ];
 
-  final List<String> _availableTags = ['Study', 'Politics', 'Tech', 'Casual', 'Entertainment'];
+  final List<String> _availableTags = [
+    'Study', 'Politics', 'Tech', 'Casual', 'Entertainment'
+  ];
 
   void _showProfileMenu(BuildContext context) {
     showGeneralDialog(
@@ -548,25 +685,37 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
               decoration: BoxDecoration(
                   color: const Color(0xFF161824).withOpacity(0.95),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF2F4BA2).withOpacity(0.3))),
+                  border: Border.all(
+                      color: const Color(0xFF2F4BA2).withOpacity(0.3))),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.person_outline, color: Color(0xFFE947F5)),
-                    title: const Text('View Profile', style: TextStyle(color: Colors.white)),
+                    leading: const Icon(Icons.person_outline,
+                        color: Color(0xFFE947F5)),
+                    title: const Text('View Profile',
+                        style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfilePictureScreen()));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const ProfilePictureScreen()));
                     },
                   ),
                   const Divider(color: Colors.white10, height: 1),
                   ListTile(
-                    leading: const Icon(Icons.settings_outlined, color: Color(0xFF2F4BA2)),
-                    title: const Text('Settings', style: TextStyle(color: Colors.white)),
+                    leading: const Icon(Icons.settings_outlined,
+                        color: Color(0xFF2F4BA2)),
+                    title: const Text('Settings',
+                        style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SettingsScreen()));
                     },
                   ),
                 ],
@@ -585,241 +734,359 @@ class _ChatRoomsScreenState extends State<ChatRoomsScreen> {
     showDialog(
         context: context,
         builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setStateDialog) {
-              return AlertDialog(
-                backgroundColor: const Color(0xFF161824),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text("Create New Space", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: newRoomController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: "Enter space name...",
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.05),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
+          return StatefulBuilder(builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF161824),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text("Create New Space",
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: newRoomController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "Enter space name...",
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none),
                     ),
-                    const SizedBox(height: 16),
-                    const Text("Select Topics (Tags):", style: TextStyle(color: Colors.white70, fontSize: 13)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 4.0,
-                      children: _availableTags.map((tag) {
-                        final isSelected = selectedTags.contains(tag);
-                        return FilterChip(
-                          label: Text(tag, style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 12)),
-                          selected: isSelected,
-                          selectedColor: const Color(0xFFE947F5).withOpacity(0.4),
-                          backgroundColor: Colors.white.withOpacity(0.05),
-                          checkmarkColor: Colors.white,
-                          onSelected: (bool selected) {
-                            setStateDialog(() {
-                              if (selected) {
-                                selectedTags.add(tag);
-                              } else {
-                                selectedTags.remove(tag);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE947F5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () {
-                      if (newRoomController.text.trim().isNotEmpty) {
-                        setState(() {
-                          _rooms.insert(0, {
-                            "title": newRoomController.text.trim(),
-                            "msg": "Space created! Start chatting.",
-                            "time": "Just now",
-                            "tags": List.from(selectedTags)
+                  const SizedBox(height: 16),
+                  const Text("Select Topics (Tags):",
+                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 4.0,
+                    children: _availableTags.map((tag) {
+                      final isSelected = selectedTags.contains(tag);
+                      return FilterChip(
+                        label: Text(tag,
+                            style: TextStyle(
+                                color:
+                                    isSelected ? Colors.white : Colors.white70,
+                                fontSize: 12)),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFFE947F5).withOpacity(0.4),
+                        backgroundColor: Colors.white.withOpacity(0.05),
+                        checkmarkColor: Colors.white,
+                        onSelected: (bool selected) {
+                          setStateDialog(() {
+                            if (selected) {
+                              selectedTags.add(tag);
+                            } else {
+                              selectedTags.remove(tag);
+                            }
                           });
-                        });
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: const Text("Create", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        },
+                      );
+                    }).toList(),
                   ),
                 ],
-              );
-            }
-          );
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel",
+                      style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE947F5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    if (newRoomController.text.trim().isNotEmpty) {
+                      setState(() {
+                        _rooms.insert(0, {
+                          "title": newRoomController.text.trim(),
+                          "msg": "Space created! Start chatting.",
+                          "time": "Just now",
+                          "tags": List.from(selectedTags)
+                        });
+                      });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text("Create",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          });
         });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
-      body: Stack(
-        children: [
-          ListView.builder(
-            padding: const EdgeInsets.only(top: 120, left: 16, right: 16, bottom: 100),
-            itemCount: _rooms.length,
-            itemBuilder: (context, index) {
-              final room = _rooms[index];
-              final accentColor = index % 2 == 0 ? const Color(0xFFE947F5) : const Color(0xFF2F4BA2);
-              return _chatTile(context, room["title"], room["msg"], room["time"], room["tags"] ?? [], accentColor);
-            },
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, spreadRadius: 1)
-                          ]),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const CubeFoldingLogo(size: 30),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.shield_outlined, size: 16, color: Colors.white54),
-                              const SizedBox(width: 4),
-                              Switch(
-                                value: globalAiModerationEnabled,
-                                onChanged: (val) {
-                                  setState(() => globalAiModerationEnabled = val);
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(val ? "AI Moderation Enabled" : "AI Moderation Disabled"),
-                                    duration: const Duration(seconds: 1),
-                                    backgroundColor: const Color(0xFF2F4BA2),
-                                  ));
-                                },
-                                activeColor: const Color(0xFFE947F5),
-                                activeTrackColor: const Color(0xFFE947F5).withOpacity(0.4),
-                                inactiveThumbColor: Colors.grey[500],
-                                inactiveTrackColor: Colors.grey[800],
-                              ),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () => _showProfileMenu(context),
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(colors: [Color(0xFFE947F5), Color(0xFF2F4BA2)]),
-                                  ),
-                                  child: const CircleAvatar(
-                                    radius: 16,
-                                    backgroundImage: NetworkImage('https://i.scdn.co/image/ab67616d0000b273d9985092cd88bffd97653b58'),
+      // DARK VEIL FLUID BACKGROUND APPLIED HERE
+      body: DarkVeilBackground(
+        child: Stack(
+          children: [
+            ListView.builder(
+              padding: const EdgeInsets.only(
+                  top: 120, left: 16, right: 16, bottom: 100),
+              itemCount: _rooms.length,
+              itemBuilder: (context, index) {
+                final room = _rooms[index];
+                final accentColor = index % 2 == 0
+                    ? const Color(0xFFE947F5)
+                    : const Color(0xFF2F4BA2);
+                return _chatTile(context, room["title"], room["msg"],
+                    room["time"], room["tags"] ?? [], accentColor);
+              },
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.15),
+                                width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 15,
+                                  spreadRadius: 2)
+                            ]),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const CubeFoldingLogo(size: 30),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.shield_outlined,
+                                    size: 16, color: Colors.white54),
+                                const SizedBox(width: 4),
+                                Switch(
+                                  value: globalAiModerationEnabled,
+                                  onChanged: (val) {
+                                    setState(
+                                        () => globalAiModerationEnabled = val);
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(SnackBar(
+                                      content: Text(val
+                                          ? "AI Moderation Enabled"
+                                          : "AI Moderation Disabled"),
+                                      duration: const Duration(seconds: 1),
+                                      backgroundColor: const Color(0xFF2F4BA2),
+                                    ));
+                                  },
+                                  activeColor: const Color(0xFFE947F5),
+                                  activeTrackColor:
+                                      const Color(0xFFE947F5).withOpacity(0.4),
+                                  inactiveThumbColor: Colors.grey[500],
+                                  inactiveTrackColor: Colors.grey[800],
+                                ),
+                                const SizedBox(width: 8),
+                                const Text("Ansh",
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14)),
+                                const SizedBox(width: 12),
+                                // SUPERCHARGED PROFILE GLOW
+                                GestureDetector(
+                                  onTap: () => _showProfileMenu(context),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: const LinearGradient(colors: [
+                                        Color(0xFFE947F5),
+                                        Color(0xFF2F4BA2)
+                                      ]),
+                                      boxShadow: [
+                                        // Outer Pink Glow
+                                        BoxShadow(
+                                          color: const Color(0xFFE947F5).withOpacity(0.6),
+                                          blurRadius: 15,
+                                          spreadRadius: 3,
+                                        ),
+                                        // Outer Blue Glow
+                                        BoxShadow(
+                                          color: const Color(0xFF2F4BA2).withOpacity(0.6),
+                                          blurRadius: 15,
+                                          spreadRadius: 1,
+                                          offset: const Offset(-2, 2)
+                                        ),
+                                      ]
+                                    ),
+                                    child: const CircleAvatar(
+                                      radius: 16,
+                                      backgroundImage: NetworkImage(
+                                          'https://i.scdn.co/image/ab67616d0000b273d9985092cd88bffd97653b58'),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          )
-                        ],
+                              ],
+                            )
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            bottom: 30,
-            right: 20,
-            child: FloatingActionButton(
-              backgroundColor: const Color(0xFF2F4BA2),
-              foregroundColor: Colors.white,
-              elevation: 8,
-              onPressed: _createNewRoom,
-              child: const Icon(Icons.add),
+            // GLASSMORPHED PLUS SIGN
+            Positioned(
+              bottom: 30,
+              right: 20,
+              child: GestureDetector(
+                onTap: _createNewRoom,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+                    child: Container(
+                      width: 60, height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      ),
+                      child: const Icon(Icons.add, color: Colors.white, size: 28),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _chatTile(BuildContext context, String title, String msg, String time, List<String> tags, Color accentColor) {
+  Widget _chatTile(BuildContext context, String title, String msg, String time,
+      List<String> tags, Color accentColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accentColor.withOpacity(0.2))),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        leading: Container(
-          width: 50, height: 50,
-          decoration: BoxDecoration(color: accentColor.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-          child: Center(
-              child: Text(title.isNotEmpty ? title[0].toUpperCase() : "?",
-                  style: TextStyle(color: accentColor, fontSize: 20, fontWeight: FontWeight.w800))),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+          child: Container(
+            decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: -5,
+                  )
+                ]),
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              leading: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12)),
+                child: Center(
+                    child: Text(title.isNotEmpty ? title[0].toUpperCase() : "?",
+                        style: TextStyle(
+                            color: accentColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800))),
+              ),
+              // SHINY HOVER APPLIED TO TITLE
+              title: ShinyHoverText(
+                  text: title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.white)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(msg,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white54, fontSize: 14)),
+                  if (tags.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                        spacing: 6,
+                        children: tags
+                            .map((t) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4)),
+                                  child: Text(t,
+                                      style: const TextStyle(
+                                          fontSize: 10, color: Colors.white70)),
+                                ))
+                            .toList())
+                  ]
+                ],
+              ),
+              trailing: Text(time,
+                  style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          PeerspaceChatScreen(roomName: title, tags: tags))),
+            ),
+          ),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(msg, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 14)),
-            if (tags.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                children: tags.map((t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                  child: Text(t, style: const TextStyle(fontSize: 10, color: Colors.white70)),
-                )).toList()
-              )
-            ]
-          ],
-        ),
-        trailing: Text(time, style: const TextStyle(color: Colors.white38, fontSize: 12)),
-        onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => PeerspaceChatScreen(roomName: title, tags: tags))),
       ),
     );
   }
 }
 
 // ==========================================
-// 5. CHAT SCREEN (AI FILTERING & MULTILINE KEYS)
+// 5. INDIVIDUAL CHAT SCREEN (DARK VEIL)
 // ==========================================
 
 class PeerspaceChatScreen extends StatefulWidget {
   final String roomName;
-  final List<String> tags; // Tags map to boundaries 
+  final List<String> tags;
 
-  const PeerspaceChatScreen({super.key, required this.roomName, required this.tags});
+  const PeerspaceChatScreen(
+      {super.key, required this.roomName, required this.tags});
 
   @override
   State<PeerspaceChatScreen> createState() => _PeerspaceChatScreenState();
@@ -834,17 +1101,15 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
   @override
   void initState() {
     super.initState();
-    _controller.addListener(() => setState(() => _isTyping = _controller.text.isNotEmpty));
+    _controller.addListener(
+        () => setState(() => _isTyping = _controller.text.isNotEmpty));
 
-    // Listen to hardware keyboard inputs
     _focusNode.onKeyEvent = (FocusNode node, KeyEvent event) {
       if (event is KeyDownEvent) {
         if (event.logicalKey == LogicalKeyboardKey.enter) {
           if (HardwareKeyboard.instance.isShiftPressed) {
-            // Shift + Enter: Allow the newline to pass through to the TextField
-            return KeyEventResult.ignored; 
+            return KeyEventResult.ignored;
           } else {
-            // Enter only: Send the message
             _handleSend();
             return KeyEventResult.handled;
           }
@@ -866,21 +1131,24 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
     String text = _controller.text.trim();
 
     if (globalAiModerationEnabled) {
-      // Validating against Group Topic-Based Boundaries [cite: 20, 34]
-      bool isAbusive = text.toLowerCase().contains("spam") || text.toLowerCase().contains("badword");
-      bool isOffTopic = false;
-      String blockReason = "Off-topic discussion.";
+      String textLower = text.toLowerCase();
+      
+      bool isStudyRoom = widget.tags.contains("Study");
+      bool isPoliticsRoom = widget.tags.contains("Politics");
 
-      // Boundary rules based on assigned space tags
-      if (widget.tags.contains("Study") && (text.toLowerCase().contains("movie") || text.toLowerCase().contains("cinema"))) {
+      bool isAbusive = textLower.contains("spam") || textLower.contains("badword");
+      
+      bool isOffTopic = false;
+      String aiReason = "Off-topic discussion.";
+
+      if (isStudyRoom && (textLower.contains("movie") || textLower.contains("cinema"))) {
         isOffTopic = true;
-        blockReason = "Cinema and Entertainment topics are strictly prohibited in Study spaces."; // 
-      } else if (!widget.tags.contains("Politics") && text.toLowerCase().contains("politics")) {
+        aiReason = "Entertainment topics are restricted in Study spaces.";
+      }
+      
+      if (!isPoliticsRoom && (textLower.contains("election") || textLower.contains("politics"))) {
         isOffTopic = true;
-        blockReason = "Political debates are outside the scope of this learning community."; // 
-      } else if (!widget.tags.contains("Tech") && text.toLowerCase().contains("code")) {
-        isOffTopic = true;
-        blockReason = "Tech-related boundaries configured. Please post in a Tech space."; 
+        aiReason = "Political discussions are only allowed in 'Politics' tagged spaces.";
       }
 
       if (isAbusive || isOffTopic) {
@@ -889,12 +1157,13 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
           backgroundColor: const Color(0xFFE947F5),
           content: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.white, size: 20),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  "Blocked by AI: ${isAbusive ? 'Policy violation.' : blockReason}",
-                  style: const TextStyle(fontWeight: FontWeight.bold))),
+                  child: Text(
+                      "Blocked by AI: ${isAbusive ? 'Policy violation.' : aiReason}",
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
             ],
           ),
         ));
@@ -904,94 +1173,134 @@ class _PeerspaceChatScreenState extends State<PeerspaceChatScreen> {
 
     setState(() => _messages.add({"text": text, "isMe": true}));
     _controller.clear();
+    _focusNode.requestFocus();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E15),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161824),
-        elevation: 1, shadowColor: Colors.black,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          backgroundColor: const Color(0xFF161824).withOpacity(0.95),
+          elevation: 1,
+          shadowColor: Colors.black,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.roomName,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white)),
+              if (widget.tags.isNotEmpty)
+                Text("Tags: ${widget.tags.join(', ')}", style: const TextStyle(fontSize: 12, color: Colors.white54)),
+            ],
+          )),
+      body: DarkVeilBackground(
+        child: Column(
           children: [
-            Text(widget.roomName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-            Text(widget.tags.join(" • "), style: const TextStyle(fontSize: 12, color: Color(0xFFE947F5))),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  return Align(
+                    alignment: msg["isMe"]
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: msg["isMe"]
+                                  ? const Color(0xFFE947F5).withOpacity(0.15)
+                                  : Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: msg["isMe"]
+                                      ? const Color(0xFFE947F5).withOpacity(0.4)
+                                      : Colors.white.withOpacity(0.2),
+                                  width: 1.2),
+                            ),
+                            child: Text(msg["text"],
+                                style:
+                                    const TextStyle(color: Colors.white, fontSize: 16)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: const Color(0xFF161824).withOpacity(0.85),
+                border: const Border(top: BorderSide(color: Colors.white10)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.newline,
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                      decoration: InputDecoration(
+                        hintText: "Message ${widget.roomName}...",
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.03),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 14),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: _handleSend,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      margin: const EdgeInsets.only(bottom: 2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isTyping
+                            ? const Color(0xFFE947F5)
+                            : Colors.white.withOpacity(0.1),
+                        boxShadow: _isTyping
+                            ? [
+                                BoxShadow(
+                                    color:
+                                        const Color(0xFFE947F5).withOpacity(0.4),
+                                    blurRadius: 10,
+                                    spreadRadius: 2)
+                              ]
+                            : null,
+                      ),
+                      child: Icon(Icons.send,
+                          color: _isTyping ? Colors.white : Colors.white54,
+                          size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            )
           ],
-        )
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return Align(
-                  alignment: msg["isMe"] ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: msg["isMe"] ? const LinearGradient(colors: [Color(0xFF2F4BA2), Color(0xFF1D306D)]) : null,
-                      color: msg["isMe"] ? null : Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: msg["isMe"] ? Colors.transparent : Colors.white10),
-                    ),
-                    child: Text(msg["text"], style: const TextStyle(color: Colors.white, fontSize: 16)),
-                  ),
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            decoration: const BoxDecoration(
-              color: Color(0xFF161824),
-              border: Border(top: BorderSide(color: Colors.white10)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end, // Align to bottom for multiline
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    minLines: 1,
-                    maxLines: 5, // Supports Multiline Input
-                    textInputAction: TextInputAction.newline, 
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText: "Message ${widget.roomName}...",
-                      hintStyle: const TextStyle(color: Colors.white38),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.03),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: _handleSend,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    margin: const EdgeInsets.only(bottom: 2), // Align visually with text box bottom
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isTyping ? const Color(0xFFE947F5) : Colors.white.withOpacity(0.1),
-                      boxShadow: _isTyping ? [BoxShadow(color: const Color(0xFFE947F5).withOpacity(0.4), blurRadius: 10, spreadRadius: 2)] : null,
-                    ),
-                    child: Icon(Icons.send, color: _isTyping ? Colors.white : Colors.white54, size: 20),
-                  ),
-                ),
-              ],
-            ),
-          )
-        ],
+        ),
       ),
     );
   }
